@@ -1,0 +1,1463 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>SGB v12.13 - Completo (Racks + Persistencia + Salidas)</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <style>
+        * { box-sizing: border-box; }
+        :root { --primary: #0f172a; --accent: #3b82f6; --success: #10b981; --danger: #ef4444; --warning: #f59e0b; --bg: #f8fafc; --card: #ffffff; --verified: #059669; --pdf: #dc2626; --doc: #8b5cf6; --output: #475569; }
+        body { font-family: 'Segoe UI', sans-serif; margin: 0; background: var(--bg); height: 100vh; display: flex; flex-direction: column; overflow: hidden; color: #334155; }
+
+        /* VERSION TAG */
+        .version-tag { position: absolute; top: 12px; right: 15px; color: rgba(255,255,255,0.4); font-size: 11px; font-weight: bold; z-index: 20001; pointer-events: none; }
+
+        /* NAV SUPERIOR */
+        .top-nav { background: var(--primary); display: flex; align-items: center; padding: 10px 20px 0; gap: 5px; z-index: 100; position: relative; }
+        .warehouse-tab { padding: 10px 25px; color: #94a3b8; background: #1e293b; border-radius: 8px 8px 0 0; cursor: pointer; font-size: 13px; font-weight: 600; border: none; transition: 0.2s; }
+        .warehouse-tab.active { background: var(--bg); color: var(--primary); }
+        .btn-add-wh { background: var(--success); color: white; border: none; padding: 8px 15px; border-radius: 6px; cursor: pointer; margin-bottom: 5px; font-size: 12px; font-weight: bold; }
+        .btn-nav-action { background: var(--accent); color: white; border: none; padding: 8px 15px; border-radius: 6px; cursor: pointer; margin-bottom: 5px; font-size: 12px; font-weight: bold; margin-left: 10px; display: flex; align-items: center; gap: 5px; }
+        .btn-reset-db { background: var(--danger); color: white; border: none; padding: 8px 15px; border-radius: 6px; cursor: pointer; margin-bottom: 5px; font-size: 12px; font-weight: bold; margin-left: auto; display: flex; align-items: center; gap: 5px; }
+        .btn-nav-action:hover, .btn-add-wh:hover { opacity: 0.9; }
+
+        /* LAYOUT */
+        #mainApp { display: none; grid-template-columns: 340px 1fr 600px; flex: 1; overflow: hidden; transition: grid-template-columns 0.3s ease; position: relative; }
+        .sidebar { background: var(--card); border-right: 1px solid #e2e8f0; padding: 20px; overflow-y: auto; overflow-x: hidden; white-space: nowrap; padding-bottom: 80px; }
+        .main-view { padding: 20px; display: flex; flex-direction: column; overflow: hidden; }
+        .right-panel { background: var(--card); border-left: 1px solid #e2e8f0; display: flex; flex-direction: column; overflow: hidden; white-space: nowrap; }
+
+        /* TOGGLES */
+        .toggle-btn { position: absolute; top: 50%; transform: translateY(-50%); background: var(--primary); color: white; padding: 15px 4px; cursor: pointer; z-index: 1000; transition: all 0.3s ease; box-shadow: 0 0 5px rgba(0,0,0,0.2); font-size: 12px; }
+        .toggle-btn:hover { background: var(--accent); }
+        #toggleLeftBtn { left: 340px; border-radius: 0 8px 8px 0; }
+        #toggleRightBtn { right: 600px; border-radius: 8px 0 0 8px; }
+
+        /* INPUTS */
+        .section-title { font-size: 11px; font-weight: 800; color: #64748b; text-transform: uppercase; margin: 15px 0 8px; display: flex; align-items: center; gap: 8px; }
+        .input-row { display: flex; align-items: center; background: #f1f5f9; padding: 6px 12px; border-radius: 8px; margin-bottom: 8px; border: 1px solid #e2e8f0; gap: 8px; position: relative; width: 100%; }
+        .input-row input, .input-row select { border: none; background: transparent; flex: 1; font-size: 13px; outline: none; min-width: 0; }
+        .pin-btn { color: #cbd5e1; cursor: pointer; transition: 0.2s; }
+        .pin-btn.active { color: var(--danger); transform: rotate(-45deg); }
+        .btn-plus-opt, .btn-config-rule { color: var(--accent); cursor: pointer; font-size: 14px; margin-left:5px; }
+        .btn-save-list { color: var(--success); cursor: pointer; margin-left: 5px; font-size: 14px; }
+        .btn-del-list { color: var(--danger); cursor: pointer; margin-left: 5px; font-size: 14px; }
+        
+        #vacanteFields { display: none; background: #f0fdf4; padding: 10px; border-radius: 8px; border: 1px dashed #86efac; margin-bottom: 10px; }
+        #vacanteFields .input-row { background: white; border-color: #bbf7d0; }
+
+        /* EXTRA TOOLS */
+        .extra-tools { display: flex; justify-content: flex-end; gap: 10px; margin-bottom: 10px; padding: 5px; border-top: 1px solid #f1f5f9; }
+        .tool-icon { color: #cbd5e1; cursor: pointer; transition: 0.2s; font-size: 14px; padding: 5px; border-radius: 4px; }
+        .tool-icon:hover { background: #f1f5f9; color: var(--primary); }
+        .tool-icon.active { color: var(--accent); background: #eff6ff; }
+
+        /* MAPA RACKS & SEMAFOROS */
+        .rack-map { display: flex; gap: 20px; overflow-x: auto; padding-bottom: 20px; align-items: flex-start; }
+        .rack-card { background: white; border-radius: 12px; border: 1px solid #e2e8f0; min-width: 260px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
+        .rack-header { padding: 10px; background: #f8fafc; border-bottom: 1px solid #e2e8f0; display: flex; flex-direction: column; border-radius: 12px 12px 0 0; }
+        .rack-top-row { display: flex; justify-content: space-between; align-items: center; width: 100%; margin-bottom: 5px; }
+        .rack-name { cursor: pointer; font-weight: bold; color: var(--primary); }
+        .rack-progress { width: 100%; height: 6px; background: #e2e8f0; border-radius: 3px; overflow: hidden; }
+        .rack-progress-bar { height: 100%; transition: width 0.5s; }
+        
+        .btn-rack-view { color: #64748b; cursor: pointer; margin-right: 8px; transition: 0.2s; font-size: 14px; }
+        .btn-rack-view:hover { color: var(--accent); transform: scale(1.2); }
+
+        /* SEMAFORO NIVEL */
+        .level-slot { border: 2px dashed #f1f5f9; margin: 8px; border-radius: 8px; min-height: 60px; padding: 5px; position: relative; }
+        .level-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px; font-size: 10px; color: #94a3b8; font-weight: 700; }
+        .status-dot { height: 8px; width: 8px; border-radius: 50%; display: inline-block; margin-right: 5px; box-shadow: 0 0 3px rgba(0,0,0,0.2); }
+        .bg-green { background: var(--success); } .bg-orange { background: #f59e0b; } .bg-red { background: var(--danger); }
+        .level-actions { display: flex; flex-direction: column; gap: 5px; align-items: center; }
+        .level-icon-btn { cursor: pointer; color: #64748b; transition: 0.2s; font-size: 14px; }
+        .level-icon-btn:hover { color: var(--primary); transform: scale(1.2); }
+
+        /* CHIP EQUIPO */
+        .item-chip { background: var(--accent); color: white; padding: 4px 8px; border-radius: 5px; font-size: 11px; margin-bottom: 3px; text-align: center; cursor: pointer; font-weight: 600; transition: transform 0.1s; }
+        .item-chip:hover { transform: scale(1.05); box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .item-chip.verified { background: var(--verified); border: 1px solid #047857; }
+
+        /* ESTILOS RECEPCION (ZONA ROJA) */
+        #receivingZone {
+            display: none; 
+            background: #fef2f2;
+            border: 2px dashed #ef4444;
+            border-radius: 12px;
+            padding: 15px;
+            margin-bottom: 20px;
+            animation: pulseRed 2s infinite;
+        }
+        @keyframes pulseRed { 0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4); } 70% { box-shadow: 0 0 0 10px rgba(239, 68, 68, 0); } 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); } }
+        
+        .receiving-title { color: #b91c1c; font-weight: 800; font-size: 14px; display: flex; align-items: center; gap: 10px; margin-bottom: 10px; text-transform: uppercase; }
+        .receiving-container { display: flex; gap: 10px; flex-wrap: wrap; }
+        .receiving-chip {
+            background: #ef4444; color: white; padding: 8px 12px; border-radius: 6px; 
+            font-size: 12px; cursor: grab; font-weight: bold; display: flex; flex-direction: column; align-items: center;
+            box-shadow: 0 4px 6px rgba(239, 68, 68, 0.3); transition: transform 0.2s;
+        }
+        .receiving-chip:hover { transform: scale(1.05) rotate(-2deg); }
+        .receiving-chip span { font-size: 9px; opacity: 0.9; margin-top: 2px; }
+
+        /* RESULTADOS BUSQUEDA GLOBAL */
+        .search-container { max-height: 500px; overflow-y: auto; margin-bottom: 15px; width: 100%; }
+        .search-card-full { border: 1px solid #bfdbfe; border-left: 4px solid var(--accent); border-radius: 8px; background: white; padding: 12px; margin-bottom: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); position: relative; animation: slideDown 0.3s ease; white-space: normal; }
+        @keyframes slideDown { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
+        .search-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #f1f5f9; padding-bottom: 8px; margin-bottom: 8px; }
+        .search-title { font-weight: 800; color: var(--primary); font-size: 13px; display: flex; align-items: center; gap: 5px; }
+        .search-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 10px; font-size: 11px; color: #475569; }
+        .search-label { font-weight: 700; color: #64748b; }
+        .search-val { font-weight: 600; color: #334155; word-break: break-word; }
+        .time-badge { display: inline-block; background: #e0f2fe; color: #0369a1; padding: 1px 5px; border-radius: 4px; font-size: 9px; font-weight: bold; border: 1px solid #bae6fd; margin-left: 4px; vertical-align: middle; white-space: nowrap; }
+        
+        .search-clear { position: absolute; right: 10px; color: #94a3b8; cursor: pointer; display: none; }
+        .search-clear:hover { color: var(--danger); }
+
+        /* SECCION NOTAS Y LINKS */
+        .search-section-header { grid-column: span 2; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px dashed #e2e8f0; padding-bottom: 2px; margin-top: 8px; margin-bottom: 2px; }
+        .search-section-title { font-weight: 800; font-size: 10px; color: #94a3b8; text-transform: uppercase; }
+        .search-extra-row { grid-column: span 2; display: flex; justify-content: space-between; align-items: center; background: #f8fafc; padding: 6px; border-radius: 6px; margin-top: 2px; border: 1px solid #f1f5f9; }
+        .search-extra-content { font-style: italic; color: #334155; font-size: 10px; flex: 1; overflow-wrap: break-word; word-break: break-all; }
+        .search-extra-actions { display: flex; gap: 8px; margin-left: 8px; min-width: 40px; justify-content: flex-end; }
+        
+        .mini-btn { cursor: pointer; font-size: 11px; transition: 0.2s; padding: 3px; border-radius: 3px; }
+        .mini-btn.add { color: white; background: var(--success); }
+        .mini-btn.edit { color: white; background: var(--accent); }
+        .mini-btn.del { color: white; background: var(--danger); }
+        .mini-btn:hover { transform: scale(1.1); box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+
+        /* TABS Y MODALES */
+        .table-tabs { display: flex; padding: 10px; gap: 10px; background: #fff; border-bottom: 1px solid #eee; }
+        .tab-btn { flex: 1; padding: 8px; border-radius: 6px; border: 1px solid #ddd; background: #f8fafc; cursor: pointer; font-weight: bold; }
+        .tab-btn.active { background: var(--primary); color: white; border-color: var(--primary); }
+        .download-footer { padding: 15px; border-top: 1px solid #e2e8f0; display: flex; flex-direction: column; gap: 8px; }
+        .btn-del-rack { color: var(--danger); cursor: pointer; opacity: 0.6; transition:0.2s; }
+        .wh-title-edit { cursor: pointer; transition: 0.2s; }
+        .wh-title-edit:hover { color: var(--accent); }
+
+        /* DOCS BADGES & BUTTONS */
+        .doc-badge { font-size: 10px; font-weight: bold; padding: 2px 6px; border-radius: 4px; display: inline-block; }
+        .doc-badge.fa { background: #dbeafe; color: #1e40af; border: 1px solid #bfdbfe; }
+        .doc-badge.oc { background: #fce7f3; color: #9d174d; border: 1px solid #fbcfe8; }
+        .btn-doc-action { border:none; background:transparent; cursor:pointer; font-size:12px; margin:0 2px; }
+        .btn-doc-action:hover { transform:scale(1.2); }
+        .btn-doc-view { background: var(--doc); color: white; border:none; padding: 2px 8px; border-radius: 4px; font-size: 10px; cursor: pointer; text-decoration: none; display: inline-flex; align-items: center; gap: 3px; margin-left: 5px; transition:0.2s; }
+        .btn-doc-view:hover { opacity: 0.9; transform:scale(1.05); }
+
+        /* MODALES */
+        #detailModal, #itemDetailModal, #dashboardModal, #uploadModal, #transferModal, #outputModal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 20000; align-items: center; justify-content: center; }
+        .modal-card { background: white; width: 95%; max-width: 1100px; max-height: 85vh; border-radius: 12px; display: flex; flex-direction: column; padding: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); }
+        .modal-card.small { max-width: 450px; }
+        .modal-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #eee; padding-bottom: 10px; margin-bottom: 10px; }
+        .modal-body { overflow-y: auto; flex: 1; overflow-x: auto; }
+        .modal-close { cursor: pointer; font-size: 18px; color: #64748b; }
+
+        #loginOverlay { position: fixed; inset: 0; background: var(--primary); display: flex; align-items: center; justify-content: center; z-index: 10000; }
+        
+        /* ESTILOS DE ETIQUETA */
+        #printArea { display: none; }
+        .label-container { width: 300px; border: 2px solid #334155; border-radius: 12px; padding: 20px; text-align: center; font-family: 'Segoe UI', sans-serif; background: white; }
+        .label-header { margin: 0; border-bottom: 2px solid #334155; padding-bottom: 10px; font-size: 18px; font-weight: 800; color: #1e293b; letter-spacing: 1px; }
+        .qr-container { margin: 20px 0; display: inline-block; padding: 12px; background: #f8fafc; border-radius: 10px; border: 1px solid #e2e8f0; }
+        .label-data-grid { text-align: left; font-size: 11px; line-height: 1.5; padding-top: 10px; display: grid; grid-template-columns: 1fr 1fr; gap: 8px 15px; color: #475569; }
+        .label-data-grid b { color: #0f172a; font-weight: 700; text-transform: uppercase; font-size: 10px; }
+        
+        /* ESTILOS FICHA Y VALIDACION */
+        .detail-row { display: flex; justify-content: space-between; border-bottom: 1px solid #f1f5f9; padding: 8px 0; font-size: 13px; align-items: center; }
+        .detail-label { color: #64748b; font-weight: 600; }
+        .detail-value { color: #334155; font-weight: bold; text-align: right; display: flex; align-items: center; gap: 8px; }
+        .btn-edit-field, .action-icon { cursor: pointer; font-size: 12px; transition: 0.2s; padding: 4px; border-radius: 4px; }
+        .btn-edit-field:hover, .action-icon:hover { transform: scale(1.2); background: #eff6ff; }
+        .icon-print { color: var(--accent); } .icon-edit { color: var(--success); }
+
+        /* ESTILOS SCANNER INTEGRADO */
+        .verify-section { display: none; margin-top: 15px; border-top: 2px dashed #e2e8f0; padding-top: 15px; background: #f0fdf4; border-radius: 8px; padding: 15px; }
+        .scan-input { width: 100%; padding: 8px; margin-bottom: 8px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 14px; text-align: center; }
+        .scan-input:focus { border-color: var(--accent); outline: none; box-shadow: 0 0 0 2px rgba(59,130,246,0.2); }
+
+        /* CAJAS DE CARGA */
+        .upload-box { border: 1px solid #e2e8f0; border-radius: 8px; padding: 10px; margin-bottom: 10px; background: #f8fafc; }
+        .upload-box h4 { margin: 0 0 8px 0; font-size: 12px; color: var(--primary); display: flex; align-items: center; gap: 5px; }
+        .upload-box input[type="text"] { width: 100%; padding: 6px; border: 1px solid #cbd5e1; border-radius: 4px; font-size: 11px; margin-bottom: 5px; }
+        .upload-box input[type="file"] { width: 100%; font-size: 10px; margin-bottom: 5px; }
+        .upload-box button { width: 100%; padding: 6px; background: var(--accent); color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 11px; font-weight: bold; }
+        .upload-box button:hover { opacity: 0.9; }
+
+        /* TRASPASOS & SALIDAS */
+        .btn-transfer-drop { margin-top: 15px; border: 2px dashed #f59e0b; background: #fffbeb; color: #d97706; border-radius: 8px; padding: 15px; text-align: center; cursor: pointer; font-weight: bold; transition: 0.3s; position: relative; }
+        .btn-transfer-drop:hover, .btn-transfer-drop.dragover { background: #fef3c7; border-color: #d97706; transform: scale(1.02); }
+        
+        .btn-output-drop { margin-top: 10px; border: 2px dashed #94a3b8; background: #f1f5f9; color: #475569; border-radius: 8px; padding: 15px; text-align: center; cursor: pointer; font-weight: bold; transition: 0.3s; position: relative; }
+        .btn-output-drop:hover, .btn-output-drop.dragover { background: #e2e8f0; border-color: #475569; transform: scale(1.02); }
+
+        .transfer-count-badge { position: absolute; top: -8px; right: -8px; background: #ef4444; color: white; border-radius: 50%; width: 20px; height: 20px; font-size: 10px; display: flex; align-items: center; justify-content: center; font-weight: bold; box-shadow: 0 2px 4px rgba(0,0,0,0.2); }
+        
+        .transfer-queue-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 10px; margin-top: 10px; }
+        .transfer-queue-item { background: #fff7ed; border: 1px solid #fdba74; padding: 8px; border-radius: 6px; position: relative; font-size: 11px; text-align: center; }
+        .output-queue-item { background: #f1f5f9; border: 1px solid #cbd5e1; padding: 8px; border-radius: 6px; position: relative; font-size: 11px; text-align: center; }
+
+        .btn-remove-transfer { position: absolute; top: 2px; right: 2px; color: #f97316; cursor: pointer; font-size: 12px; }
+        .btn-remove-transfer:hover { color: #c2410c; }
+
+        /* RACK SUMMARY BADGE */
+        .rack-summary-container { display:flex; gap:10px; margin-bottom:15px; padding-bottom:15px; border-bottom:1px dashed #e2e8f0; overflow-x:auto; }
+        .level-summary-badge { padding: 5px 10px; border-radius: 6px; font-size: 11px; font-weight: bold; text-align: center; min-width: 60px; color: #fff; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+    </style>
+</head>
+<body onload="init()">
+
+    <div class="version-tag">v12.13 + Persistencia + Salidas</div>
+
+    <div id="loginOverlay">
+        <div style="background:white; padding:40px; border-radius:15px; width:300px; text-align:center;">
+            <h2><i class="fas fa-cubes"></i> Acceso SGB</h2>
+            <input type="password" id="passIn" placeholder="Pass (123)" style="width:100%; padding:12px; margin-bottom:15px; border:1px solid #ddd; border-radius:8px;">
+            <button onclick="login()" style="width:100%; padding:12px; background:var(--accent); color:white; border:none; border-radius:8px; font-weight:bold; cursor:pointer;">Ingresar</button>
+        </div>
+    </div>
+
+    <div id="dashboardModal"><div class="modal-card"><div class="modal-header"><h3 style="margin:0; color:var(--primary);"><i class="fas fa-chart-pie"></i> Dashboard Global</h3><i class="fas fa-times modal-close" onclick="closeDashboard()"></i></div><div class="modal-body" id="dashboardContent"></div></div></div>
+    
+    <div id="uploadModal">
+        <div class="modal-card small">
+            <div class="modal-header"><h3 style="margin:0; color:var(--primary);"><i class="fas fa-file-upload"></i> Subir Documentos</h3><i class="fas fa-times modal-close" onclick="closeUploadModal()"></i></div>
+            <div class="modal-body">
+                <div style="padding:10px;">
+                    <p style="font-size:11px; color:#64748b; margin-bottom:10px;">Cargue Facturas o Órdenes de Compra para vincularlas automáticamente.</p>
+                    
+                    <div class="upload-box">
+                        <h4><i class="fas fa-file-invoice"></i> Cargar Factura</h4>
+                        <input type="text" id="upFaKey" placeholder="N° Factura (Ej: F-001)">
+                        <input type="file" id="upFaFile" accept="application/pdf,image/*">
+                        <button type="button" onclick="uploadDoc('fa')"><i class="fas fa-save"></i> Guardar Factura</button>
+                    </div>
+
+                    <div class="upload-box">
+                        <h4><i class="fas fa-file-contract"></i> Cargar Orden de Compra</h4>
+                        <input type="text" id="upOcKey" placeholder="N° OC (Ej: OC-999)">
+                        <input type="file" id="upOcFile" accept="application/pdf,image/*">
+                        <button type="button" onclick="uploadDoc('oc')"><i class="fas fa-save"></i> Guardar OC</button>
+                    </div>
+
+                    <div style="text-align:center; margin-top:10px; font-size:10px; color:#94a3b8;">Los documentos se guardan en memoria mientras la sesión esté activa (Nota: Docs pesados pueden no persistir).</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="transferModal">
+        <div class="modal-card small">
+            <div class="modal-header"><h3 style="margin:0; color:#d97706;"><i class="fas fa-truck-loading"></i> Confirmar Traspaso</h3><i class="fas fa-times modal-close" onclick="closeTransferModal()"></i></div>
+            <div class="modal-body">
+                <div style="padding:10px;">
+                    <label style="font-size:12px; font-weight:bold; color:#475569;">Bodega Destino:</label>
+                    <select id="transferDestWh" style="width:100%; padding:8px; margin-top:5px; margin-bottom:10px; border-radius:6px; border:1px solid #cbd5e1;"></select>
+                    
+                    <label style="font-size:12px; font-weight:bold; color:#475569;">Motivo del Traspaso:</label>
+                    <input type="text" id="transferReason" placeholder="Ej: Reparación, Asignación usuario..." style="width:100%; padding:8px; margin-top:5px; margin-bottom:15px; border-radius:6px; border:1px solid #cbd5e1;">
+
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:5px;">
+                        <span style="font-size:12px; font-weight:bold;">Equipos en Cola:</span>
+                        <button onclick="clearTransferQueue()" style="border:none; background:none; color:var(--danger); font-size:11px; cursor:pointer;">Limpiar todo</button>
+                    </div>
+                    <div id="transferQueueList" class="transfer-queue-grid"></div>
+                    
+                    <button onclick="executeTransfer()" style="width:100%; margin-top:20px; padding:12px; background:#d97706; color:white; border:none; border-radius:8px; font-weight:bold; cursor:pointer;"><i class="fas fa-check"></i> PROCESAR TRASPASO</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="outputModal">
+        <div class="modal-card small">
+            <div class="modal-header"><h3 style="margin:0; color:var(--output);"><i class="fas fa-sign-out-alt"></i> Confirmar Salida / Baja</h3><i class="fas fa-times modal-close" onclick="closeOutputModal()"></i></div>
+            <div class="modal-body">
+                <div style="padding:10px;">
+                    <p style="font-size:11px; color:#ef4444; margin-bottom:15px;">⚠️ <b>Atención:</b> Los equipos saldrán del inventario de forma definitiva.</p>
+                    
+                    <label style="font-size:12px; font-weight:bold; color:#475569;">Tipo de Movimiento:</label>
+                    <select id="outputType" style="width:100%; padding:8px; margin-top:5px; margin-bottom:10px; border-radius:6px; border:1px solid #cbd5e1;">
+                        <option value="VENTA">Venta</option>
+                        <option value="ASIGNACION">Asignación Empleado</option>
+                        <option value="DEVOLUCION">Devolución Proveedor</option>
+                        <option value="MERMA">Baja por Merma/Daño</option>
+                        <option value="OTRO">Otro</option>
+                    </select>
+                    
+                    <label style="font-size:12px; font-weight:bold; color:#475569;">Documento Respaldo:</label>
+                    <input type="text" id="outputDoc" placeholder="Ej: Ticket #1234, Acta #99..." style="width:100%; padding:8px; margin-top:5px; margin-bottom:10px; border-radius:6px; border:1px solid #cbd5e1;">
+
+                    <label style="font-size:12px; font-weight:bold; color:#475569;">Observaciones:</label>
+                    <input type="text" id="outputObs" placeholder="Detalles adicionales..." style="width:100%; padding:8px; margin-top:5px; margin-bottom:15px; border-radius:6px; border:1px solid #cbd5e1;">
+
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:5px;">
+                        <span style="font-size:12px; font-weight:bold;">Equipos a Procesar:</span>
+                        <button onclick="clearOutputQueue()" style="border:none; background:none; color:var(--danger); font-size:11px; cursor:pointer;">Limpiar todo</button>
+                    </div>
+                    <div id="outputQueueList" class="transfer-queue-grid"></div>
+                    
+                    <button onclick="executeOutput()" style="width:100%; margin-top:20px; padding:12px; background:var(--output); color:white; border:none; border-radius:8px; font-weight:bold; cursor:pointer;"><i class="fas fa-check"></i> CONFIRMAR SALIDA</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="detailModal">
+        <div class="modal-card">
+            <div class="modal-header"><div style="display:flex; align-items:center;"><h3 style="margin:0" id="modalTitle">Contenido Nivel</h3><div id="levelActions"></div></div><i class="fas fa-times modal-close" onclick="closeModal()"></i></div>
+            <div class="modal-body">
+                <div id="rackSummaryView" class="rack-summary-container" style="display:none;"></div>
+                <table style="width:100%; border-collapse:collapse; font-size:11px; white-space: nowrap;"><thead style="background:#f8fafc; text-align:left; color:#64748b;"><tr><th style="padding:8px">Select</th><th>ID</th><th>Serie</th><th>Marca</th><th>Modelo</th><th>Hostname</th><th>Tipo</th><th>St</th><th>OC</th><th>Cía</th><th>Prov</th><th>Fact</th><th>F.Ing</th><th>F.Comp</th><th>Usuario</th><th>Correo</th><th>Acc</th></tr></thead><tbody id="modalContent"></tbody></table>
+            </div>
+        </div>
+    </div>
+
+    <div id="itemDetailModal"><div class="modal-card small"><div class="modal-header"><h3 style="margin:0; color:var(--primary);"><i class="fas fa-server"></i> Ficha del Equipo</h3><i class="fas fa-times modal-close" onclick="closeItemModal()"></i></div><div class="modal-body" id="itemModalContent"></div></div></div>
+
+    <nav class="top-nav" id="topNav" style="display:none;">
+        <div id="tabsContainer" style="display:flex; gap:5px;"></div>
+        <button class="btn-add-wh" onclick="nuevaBodega()"><i class="fas fa-plus"></i> Añadir Bodega</button>
+        <button class="btn-nav-action" onclick="showDashboard()"><i class="fas fa-chart-pie"></i> Dashboard</button>
+        <button class="btn-reset-db" onclick="resetDB()"><i class="fas fa-bomb"></i> Reset DB</button>
+    </nav>
+
+    <div id="mainApp">
+        <div id="toggleLeftBtn" class="toggle-btn" onclick="toggleLeft()" title="Ocultar Menú"><i class="fas fa-chevron-left" id="iconLeft"></i></div>
+        <div id="toggleRightBtn" class="toggle-btn" onclick="toggleRight()" title="Ocultar Panel"><i class="fas fa-chevron-right" id="iconRight"></i></div>
+
+        <aside class="sidebar">
+            <div class="section-title">Control Operativo</div>
+            <div class="input-row" style="background:#eff6ff; border-color:#bfdbfe;"><i class="fas fa-user-cog" style="color:var(--accent)"></i><input type="text" id="operador" placeholder="Operador Turno" style="font-weight:bold; color:var(--primary);"><i class="fas fa-thumbtack pin-btn" id="pinOp" onclick="togglePin('Op')"></i></div>
+            
+            <div class="section-title">Buscador Global</div>
+            <div class="input-row" style="position:relative">
+                <i class="fas fa-search"></i>
+                <input type="text" id="qS" placeholder="Activo o Serie..." oninput="buscarRapido()">
+                <i class="fas fa-times search-clear" id="btnCls" onclick="limpiarBusqueda()"></i>
+            </div>
+            <div id="qRes" class="search-container" style="display:none;"></div>
+            
+            <div id="btnDropZone" class="btn-transfer-drop" onclick="openTransferModal()" ondragover="allowDrop(event)" ondrop="dropToTransfer(event)">
+                <div id="transferBadge" class="transfer-count-badge" style="display:none;">0</div>
+                <i class="fas fa-truck-loading" style="font-size:20px; display:block; margin-bottom:5px;"></i>
+                TRASPASAR EQUIPOS
+                <div style="font-size:9px; font-weight:normal; margin-top:3px; color:#b45309;">Arrastra equipos aquí</div>
+            </div>
+
+            <div id="btnOutputZone" class="btn-output-drop" onclick="openOutputModal()" ondragover="allowDrop(event)" ondrop="dropToOutput(event)">
+                <div id="outputBadge" class="transfer-count-badge" style="display:none; background:var(--output);">0</div>
+                <i class="fas fa-sign-out-alt" style="font-size:20px; display:block; margin-bottom:5px;"></i>
+                SALIDAS / BAJAS
+                <div style="font-size:9px; font-weight:normal; margin-top:3px; color:#64748b;">Ventas, Bajas, Asignación</div>
+            </div>
+
+            <div class="section-title">Registro Masivo</div>
+            <div class="input-row"><i class="fas fa-tag"></i><input type="text" id="idA" placeholder="ID Activo"></div>
+            <div class="input-row"><i class="fas fa-barcode"></i><input type="text" id="snA" placeholder="Serie"></div>
+            
+            <div class="input-row"><i class="fas fa-laptop"></i><select id="tipA" onchange="aplicarReglaTipo()"></select><i class="fas fa-plus btn-plus-opt" onclick="addOption('tipA')"></i><i class="fas fa-cog btn-config-rule" onclick="configurarReglaTipo()"></i><i class="fas fa-thumbtack pin-btn" id="pinTip" onclick="togglePin('Tip')"></i></div>
+            
+            <div class="input-row">
+                <i class="fas fa-copyright"></i><input type="text" id="brandA" list="listBrandA" placeholder="Marca">
+                <datalist id="listBrandA"></datalist>
+                <i class="fas fa-save btn-save-list" onclick="saveToList('brandA')" title="Guardar Marca"></i><i class="fas fa-trash btn-del-list" onclick="delFromList('brandA')" title="Borrar Marca"></i><i class="fas fa-thumbtack pin-btn" id="pinBrand" onclick="togglePin('Brand')"></i>
+            </div>
+
+            <div class="input-row">
+                <i class="fas fa-cube"></i><input type="text" id="modelA" list="listModelA" placeholder="Modelo">
+                <datalist id="listModelA"></datalist>
+                <i class="fas fa-save btn-save-list" onclick="saveToList('modelA')" title="Guardar Modelo"></i><i class="fas fa-trash btn-del-list" onclick="delFromList('modelA')" title="Borrar Modelo"></i><i class="fas fa-thumbtack pin-btn" id="pinModel" onclick="togglePin('Model')"></i>
+            </div>
+
+            <div class="input-row"><i class="fas fa-calendar-plus" style="color:#3b82f6"></i><span class="date-label">(Ingreso)</span><input type="date" id="fIng"><i class="fas fa-thumbtack pin-btn" id="pinFIng" onclick="togglePin('FIng')"></i></div>
+            <div class="input-row"><i class="fas fa-shopping-bag" style="color:#f59e0b"></i><span class="date-label">(Compra)</span><input type="date" id="fComp"><i class="fas fa-thumbtack pin-btn" id="pinFComp" onclick="togglePin('FComp')"></i></div>
+            <div class="input-row"><i class="fas fa-map-marker-alt" style="color:#ef4444"></i><select id="destRack" title="Ubicación Destino"></select><i class="fas fa-thumbtack pin-btn" id="pinDest" onclick="togglePin('Dest')"></i></div>
+            <div class="input-row"><i class="fas fa-file-invoice"></i><input type="text" id="faA" placeholder="Factura"><i class="fas fa-thumbtack pin-btn" id="pinFa" onclick="togglePin('Fa')"></i></div>
+            <div class="input-row"><i class="fas fa-file-contract"></i><input type="text" id="ocA" placeholder="Orden de Compra"><i class="fas fa-thumbtack pin-btn" id="pinOc" onclick="togglePin('Oc')"></i></div>
+
+            <div class="input-row"><i class="fas fa-truck-moving"></i><select id="provA"></select><i class="fas fa-plus btn-plus-opt" onclick="addOption('provA')"></i><i class="fas fa-thumbtack pin-btn" id="pinProv" onclick="togglePin('Prov')"></i></div>
+            <div class="input-row"><i class="fas fa-building"></i><select id="ciA"></select><i class="fas fa-plus btn-plus-opt" onclick="addOption('ciA')"></i><i class="fas fa-thumbtack pin-btn" id="pinCi" onclick="togglePin('Ci')"></i></div>
+            
+            <div class="input-row"><i class="fas fa-info-circle"></i><select id="stA" onchange="checkVacante()"></select><i class="fas fa-plus btn-plus-opt" onclick="addOption('stA')"></i><i class="fas fa-cog btn-config-rule" onclick="configurarReglaStatus()"></i><i class="fas fa-thumbtack pin-btn" id="pinSt" onclick="togglePin('St')"></i></div>
+            
+            <div id="vacanteFields">
+                <div class="input-row"><i class="fas fa-network-wired"></i><input type="text" id="hostA" placeholder="Hostname *"></div>
+                <div class="input-row"><i class="fas fa-user"></i><input type="text" id="usrA" placeholder="Nombre Usuario *"></div>
+                <div class="input-row"><i class="fas fa-envelope"></i><input type="text" id="emailA" placeholder="Correo Electrónico *"></div>
+                <div class="input-row"><i class="fas fa-map-marked-alt"></i><input type="text" id="areaA" placeholder="Área *"></div>
+                <div class="input-row"><i class="fas fa-coins"></i><input type="text" id="ccA" placeholder="Centro de Costos *"></div>
+                <div class="input-row"><i class="fas fa-project-diagram"></i><input type="text" id="canalA" placeholder="Canal *"></div>
+            </div>
+
+            <div class="extra-tools">
+                <i class="fas fa-sticky-note tool-icon" id="btnTogNotes" onclick="toggleField('fieldNotes', this)" title="Agregar Notas"></i>
+                <i class="fas fa-link tool-icon" id="btnTogUrl" onclick="toggleField('fieldUrl', this)" title="Agregar URL"></i>
+            </div>
+            <div id="fieldNotes" style="display:none" class="input-row"><i class="fas fa-comment-alt"></i><input type="text" id="notesA" placeholder="Notas..."></div>
+            <div id="fieldUrl" style="display:none" class="input-row"><i class="fas fa-link"></i><input type="text" id="urlA" placeholder="URL / Link..."></div>
+
+            <div style="display:flex; flex-direction:column; gap:8px; margin-top:20px;">
+                <button type="button" onclick="registrar()" style="background:var(--success); color:white; border:none; padding:12px; border-radius:8px; font-weight:bold; cursor:pointer; width:100%;"><i class="fas fa-print"></i> REGISTRAR</button>
+                <button type="button" onclick="openUploadModal()" style="background:var(--doc); color:white; border:none; padding:12px; border-radius:8px; font-weight:bold; cursor:pointer; width:100%;"><i class="fas fa-file-upload"></i> SUBIR DOCUMENTOS</button>
+            </div>
+        </aside>
+
+        <main class="main-view">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+                <h2 class="wh-title-edit" onclick="renombrarBodega()"><i class="fas fa-pen-to-square" style="font-size:14px; margin-right:5px; color:var(--accent)"></i><span id="whTitle">Bodega 1</span></h2>
+                <button onclick="addRack()" style="background:var(--accent); color:white; border:none; padding:8px 15px; border-radius:8px; font-weight:bold; cursor:pointer;"><i class="fas fa-plus"></i> Añadir Rack</button>
+            </div>
+            
+            <div id="receivingZone">
+                <div class="receiving-title"><i class="fas fa-exclamation-triangle"></i> ZONA DE RECEPCIÓN - TRASPASOS PENDIENTES <span id="receivingCount" style="margin-left:auto; background:white; color:#b91c1c; padding:2px 8px; border-radius:4px; font-size:12px;">0</span></div>
+                <div style="font-size:11px; color:#ef4444; margin-bottom:10px;">⚠️ Arrastre los equipos a un rack para confirmar ubicación y reetiquetar.</div>
+                <div id="receivingContent" class="receiving-container"></div>
+            </div>
+
+            <div id="wMap" class="rack-map"></div>
+        </main>
+
+        <aside class="right-panel">
+            <div class="table-tabs">
+                <button id="btnTabStk" class="tab-btn active" onclick="switchTab('stk')">Stock</button>
+                <button id="btnTabLog" class="tab-btn" onclick="switchTab('log')">Auditoría</button>
+                <button id="btnTabDocs" class="tab-btn" onclick="switchTab('docs')">Documentos</button>
+            </div>
+            <div style="padding:15px; border-bottom:1px solid #eee;"><div class="input-row" style="margin-bottom:0;"><i class="fas fa-filter"></i><input type="text" id="tableFilter" placeholder="Filtrar..." oninput="renderTable()"></div></div>
+            <div style="flex:1; overflow-y:auto; padding:10px; overflow-x:auto;"><table style="width:100%; border-collapse:collapse; font-size:11px; min-width:700px;"><thead style="background:#f8fafc; text-align:left;" id="tableHead"></thead><tbody id="tbBody"></tbody></table></div>
+            <div class="download-footer"><button onclick="descargarReporte('stock')" style="background:var(--accent); color:white; border:none; padding:10px; border-radius:8px; cursor:pointer;"><i class="fas fa-file-csv"></i> Descargar Stock Global</button><button onclick="descargarReporte('audit')" style="background:var(--success); color:white; border:none; padding:10px; border-radius:8px; cursor:pointer;"><i class="fas fa-history"></i> Descargar Auditoría</button></div>
+        </aside>
+    </div>
+
+    <div id="printArea">
+        <div class="label-container">
+            <h3 class="label-header">CONTROL DE ACTIVO</h3>
+            <div id="qrPlace" class="qr-container"></div>
+            <div class="label-data-grid">
+                <div><b>ID:</b> <span id="lId"></span></div><div><b>SN:</b> <span id="lSn"></span></div><div><b>MARCA:</b> <span id="lBr"></span></div><div><b>MOD:</b> <span id="lMod"></span></div><div><b>HOST:</b> <span id="lHost"></span></div><div><b>TIPO:</b> <span id="lTi"></span></div><div><b>ST:</b> <span id="lSt"></span></div><div><b>CIA:</b> <span id="lCi"></span></div><div><b>PROV:</b> <span id="lProv"></span></div><div><b>FACT:</b> <span id="lFa"></span></div><div><b>OC:</b> <span id="lOc"></span></div><div><b>UBIC:</b> <span id="lLoc"></span></div><div style="grid-column: span 2;"><b>F.ING:</b> <span id="lFIng"></span></div><div style="grid-column: span 2;"><b>F.COMP:</b> <span id="lFComp"></span></div>
+            </div>
+        </div>
+    </div>
+
+<script>
+    let bodegas = [{ nombre: "Bodega 1", racks: [{name:"R1", levels:4, levelNames:{}, capacities:{}}], inv: [] }];
+    let auditLog = []; let bIdx = 0; let currentTab = 'stk';
+    let globalDocs = { facturas: {}, ocs: {} }; 
+    let pins = { Fa: false, Ci: false, Tip: false, St: false, Prov: false, FComp: false, FIng: false, Dest: false, Op: false, Oc: false, Model: false, Brand: false };
+    let rules = { typeToRack: {}, statusToLevel: {} };
+    let opciones = { 
+        ciA: ["Alka", "DTA", "OPM", "DannyTex"], 
+        tipA: ["Laptop", "Monitor", "PC", "Impresora"], 
+        stA: ["Equipo nuevo", "Equipo stock", "Equipo obsoleto", "Equipo Vacante"], 
+        provA: ["Proveedor General", "Ingram", "CT", "Exel"],
+        brandA: ["Dell", "HP", "Lenovo", "Apple", "Samsung"],
+        modelA: ["Latitude 3420", "ThinkPad T14", "MacBook Air", "ProBook 450"]
+    };
+    let isLeftOpen = true; let isRightOpen = true;
+    let transferQueue = [];
+    let outputQueue = []; // COLA DE SALIDAS
+
+    // --- PERSISTENCE LOGIC (MODULO DE SALIDA INTEGRADO) ---
+    const DB_KEY = 'sgb_data_v12';
+
+    function saveDB() {
+        const data = {
+            bodegas, auditLog, globalDocs, opciones, rules
+        };
+        try {
+            localStorage.setItem(DB_KEY, JSON.stringify(data));
+            console.log("DB Guardada");
+        } catch (e) {
+            console.error("Error guardando DB (Posiblemente Storage Lleno):", e);
+        }
+    }
+
+    function loadDB() {
+        const data = localStorage.getItem(DB_KEY);
+        if(data) {
+            try {
+                const parsed = JSON.parse(data);
+                bodegas = parsed.bodegas || bodegas;
+                auditLog = parsed.auditLog || [];
+                globalDocs = parsed.globalDocs || { facturas: {}, ocs: {} };
+                opciones = parsed.opciones || opciones;
+                rules = parsed.rules || rules;
+            } catch(e) { console.error("Error cargando DB", e); }
+        }
+    }
+
+    function resetDB() {
+        if(confirm("¡PELIGRO! Esto borrará todos los datos almacenados y reiniciará el sistema. ¿Estás seguro?")) {
+            localStorage.removeItem(DB_KEY);
+            location.reload();
+        }
+    }
+
+    function init() { 
+        loadDB(); // Carga Inicial
+        document.getElementById('fIng').valueAsDate = new Date(); 
+        fillSelects(); 
+        checkVacante(); 
+    }
+
+    function login() { if(document.getElementById('passIn').value==="123"){ document.getElementById('loginOverlay').style.display='none'; document.getElementById('mainApp').style.display='grid'; document.getElementById('topNav').style.display='flex'; renderAll(); } }
+
+    function toggleLeft() { isLeftOpen = !isLeftOpen; updateGrid(); document.getElementById('iconLeft').className = isLeftOpen ? "fas fa-chevron-left" : "fas fa-chevron-right"; }
+    function toggleRight() { isRightOpen = !isRightOpen; updateGrid(); document.getElementById('iconRight').className = isRightOpen ? "fas fa-chevron-right" : "fas fa-chevron-left"; }
+    function updateGrid() {
+        let cols = (isLeftOpen && isRightOpen) ? "340px 1fr 600px" : (!isLeftOpen && isRightOpen) ? "0px 1fr 600px" : (isLeftOpen && !isRightOpen) ? "340px 1fr 0px" : "0px 1fr 0px";
+        document.getElementById('mainApp').style.gridTemplateColumns = cols;
+        document.getElementById('toggleLeftBtn').style.left = isLeftOpen ? "340px" : "0px";
+        document.getElementById('toggleRightBtn').style.right = isRightOpen ? "600px" : "0px";
+    }
+    function toggleField(id, el) { let f = document.getElementById(id); if(f.style.display==='none'){ f.style.display='flex'; el.classList.add('active'); } else{ f.style.display='none'; el.classList.remove('active'); document.querySelector(`#${id} input`).value = ""; } }
+
+    // --- GESTION DOCUMENTAL ---
+    function openUploadModal() { document.getElementById('uploadModal').style.display='flex'; }
+    function closeUploadModal() { document.getElementById('uploadModal').style.display='none'; }
+    
+    function uploadDoc(type) {
+        let keyId = type === 'fa' ? 'upFaKey' : 'upOcKey';
+        let fileId = type === 'fa' ? 'upFaFile' : 'upOcFile';
+        let key = document.getElementById(keyId).value.trim();
+        let fileInput = document.getElementById(fileId);
+        if(!key) return alert("Ingrese el número de " + (type==='fa'?'Factura':'Orden de Compra'));
+        if(!fileInput.files.length) return alert("Seleccione un archivo");
+
+        let reader = new FileReader();
+        reader.onload = function(e) {
+            let data = e.target.result;
+            if(type === 'fa') globalDocs.facturas[key] = data;
+            else globalDocs.ocs[key] = data;
+            alert((type==='fa'?'Factura':'OC') + " guardada en memoria.");
+            document.getElementById(keyId).value = "";
+            fileInput.value = "";
+            saveDB(); // GUARDAR
+            renderAll(); 
+        };
+        reader.readAsDataURL(fileInput.files[0]);
+    }
+
+    function viewDoc(type, key) {
+        let data = type === 'fa' ? globalDocs.facturas[key] : globalDocs.ocs[key];
+        if(data) {
+            let w = window.open("");
+            w.document.write(`<iframe src="${data}" frameborder="0" style="border:0; top:0px; left:0px; bottom:0px; right:0px; width:100%; height:100%;" allowfullscreen></iframe>`);
+        } else {
+            alert("Documento no encontrado en memoria.");
+        }
+    }
+    
+    function deleteDoc(type, key) {
+        if(confirm("¿Eliminar este documento de la memoria?")) {
+            if(type === 'fa') delete globalDocs.facturas[key];
+            else delete globalDocs.ocs[key];
+            saveDB(); // GUARDAR
+            renderAll();
+        }
+    }
+    
+    function downloadDocReport(type, key) {
+        let items = [];
+        bodegas.forEach(b => {
+            let matched = b.inv.filter(i => (type === 'fa' ? i.fa : i.oc) === key);
+            items = items.concat(matched);
+        });
+
+        if(items.length === 0) return alert("No hay equipos vinculados a este documento.");
+
+        let csv = "ID,Serie,Marca,Modelo,Tipo,Estatus,Cia,Prov,Fact,OC,F_Ing,F_Comp,Usuario,Area,CC\n";
+        items.forEach(i => {
+            csv += `"${i.id}","${i.sn||''}","${i.brand||''}","${i.model||''}","${i.tip}","${i.st}","${i.ci}","${i.prov||''}","${i.fa||''}","${i.oc||''}","${i.fIng||''}","${i.fComp||''}","${i.usr||''}","${i.area||''}","${i.cc||''}"\n`;
+        });
+
+        downloadCSV(csv, `Reporte_${type.toUpperCase()}_${key}.csv`);
+    }
+    
+    function downloadCSV(csv, filename) {
+        var blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+        var link = document.createElement("a");
+        if (link.download !== undefined) { 
+            var url = URL.createObjectURL(blob);
+            link.setAttribute("href", url);
+            link.setAttribute("download", filename);
+            link.style.visibility = 'hidden';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+    }
+
+    // --- CALCULO TIEMPO ---
+    function calcTimeDiff(dateString) {
+        if(!dateString) return 'N/D';
+        let parts = dateString.split('-');
+        if(parts.length !== 3) return 'N/D';
+        let start = new Date(parts[0], parts[1]-1, parts[2]); 
+        let now = new Date(); now.setHours(0,0,0,0);
+        let diff = now - start;
+        if(diff < 0) return 'Fecha futura';
+        let days = Math.floor(diff / (1000 * 60 * 60 * 24));
+        if (days > 365) return (days / 365).toFixed(1) + ' años';
+        if (days > 30) return (days / 30).toFixed(1) + ' meses';
+        return days + ' días';
+    }
+
+    // --- PDF GENERATOR ---
+    function downloadPDF(id) {
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF();
+        let item = bodegas[bIdx].inv.find(e => e.id === id);
+        if(!item) return;
+
+        doc.setFontSize(18);
+        doc.text("Ficha de Activo SGB", 10, 15);
+        doc.setFontSize(10);
+        doc.text("Generado: " + new Date().toLocaleString(), 10, 22);
+        doc.line(10, 25, 200, 25);
+
+        let y = 35;
+        doc.setFontSize(12);
+
+        const fields = [
+            ["ID Activo", item.id], ["Serie", item.sn], ["Marca", item.brand], ["Modelo", item.model],
+            ["Tipo", item.tip], ["Estatus", item.st], ["Hostname", item.host], ["Orden Compra", item.oc],
+            ["Compañía", item.ci], ["Proveedor", item.prov], ["Factura", item.fa], ["Usuario", item.usr],
+            ["Área", item.area], ["Centro Costos", item.cc], ["Canal", item.canal], ["Correo", item.email],
+            ["Fecha Ingreso", item.fIng], ["Fecha Compra", item.fComp], 
+            ["Ubicación", `${bodegas[bIdx].racks[item.r]?.name || 'Recepción'} - N${item.n}`],
+            ["Validado", item.verified ? "SI" : "NO"]
+        ];
+
+        fields.forEach(f => {
+            doc.setFont(undefined, 'bold');
+            doc.text(`${f[0]}:`, 10, y);
+            doc.setFont(undefined, 'normal');
+            doc.text(`${f[1] || '-'}`, 60, y);
+            y += 8;
+            if(y > 280) { doc.addPage(); y = 20; }
+        });
+
+        y += 5;
+        doc.setFont(undefined, 'bold');
+        doc.text("Notas:", 10, y);
+        y += 6;
+        doc.setFont(undefined, 'normal');
+        (item.notes || []).forEach(n => { doc.text(`- ${n}`, 15, y); y += 6; });
+
+        y += 5;
+        doc.setFont(undefined, 'bold');
+        doc.text("Enlaces:", 10, y);
+        y += 6;
+        doc.setFont(undefined, 'normal');
+        (item.urls || []).forEach(u => { doc.text(`- ${u}`, 15, y); y += 6; });
+
+        doc.save(`Ficha_${item.id}.pdf`);
+    }
+
+    // --- BUSCADOR GLOBAL Y GESTION EXTRAS ---
+    function limpiarBusqueda() {
+        document.getElementById('qS').value = '';
+        document.getElementById('qRes').style.display = 'none';
+        document.getElementById('btnCls').style.display = 'none';
+    }
+
+    function manageExtras(id, type, action, index = null) {
+        let item = bodegas[bIdx].inv.find(e => e.id === id);
+        if (!item) return;
+
+        if (!Array.isArray(item.notes)) item.notes = item.notes ? [item.notes] : [];
+        if (!Array.isArray(item.urls)) item.urls = item.url ? [item.url] : [];
+        
+        let targetArray = type === 'notes' ? item.notes : item.urls;
+
+        if (action === 'add') {
+            let val = prompt(`Agregar nuevo ${type === 'notes' ? 'comentario' : 'enlace'}:`);
+            if (val) targetArray.push(val);
+        } else if (action === 'edit' && index !== null) {
+            let val = prompt(`Editar:`, targetArray[index]);
+            if (val !== null) targetArray[index] = val;
+        } else if (action === 'del' && index !== null) {
+            if (confirm("¿Eliminar?")) targetArray.splice(index, 1);
+        }
+
+        if (type === 'notes') item.notes = targetArray; else item.urls = targetArray;
+        delete item.url; 
+        
+        saveDB(); // GUARDAR
+        buscarRapido(); 
+        renderAll();
+        if(document.getElementById('itemDetailModal').style.display === 'flex') verItem(id);
+    }
+
+    // --- VALIDACION EN BUSQUEDA ---
+    function checkSearchVerify(id) {
+        let loc = document.getElementById(`scanLocSearch_${id}`).value.trim().toUpperCase();
+        let scannedId = document.getElementById(`scanIdSearch_${id}`).value.trim();
+        let item = bodegas[bIdx].inv.find(e => e.id === id);
+        if(!item) return;
+        let rackName = bodegas[bIdx].racks[item.r]?.name || "Recepcion";
+        let expectedLoc = item.r === -1 ? "RECEPCION" : `${rackName}-N${item.n}`.toUpperCase();
+        let btn = document.getElementById(`btnConfSearch_${id}`);
+
+        if (loc === expectedLoc && scannedId === item.id) {
+            btn.disabled = false; btn.style.background = "var(--success)"; btn.style.cursor = "pointer";
+        } else {
+            btn.disabled = true; btn.style.background = "#cbd5e1"; btn.style.cursor = "not-allowed";
+        }
+    }
+
+    function processSearchVerify(id) {
+        let item = bodegas[bIdx].inv.find(e => e.id === id);
+        if (item) { item.verified = true; saveDB(); renderAll(); buscarRapido(); alert("¡Ubicación Validada desde Búsqueda!"); }
+    }
+
+    function buscarRapido() { 
+        let q = document.getElementById('qS').value.toLowerCase().trim(); 
+        let res = document.getElementById('qRes');
+        let btn = document.getElementById('btnCls');
+
+        if(!q) { res.style.display = 'none'; btn.style.display='none'; return; }
+        btn.style.display='block';
+
+        let foundItems = bodegas[bIdx].inv.filter(e => 
+            e.id.toLowerCase().includes(q) || 
+            (e.sn && e.sn.toLowerCase().includes(q))
+        ); 
+        
+        if(foundItems.length > 0) { 
+            res.style.display = 'block'; 
+            let html = foundItems.map(i => {
+                let rName = i.r === -1 ? "RECEPCION" : bodegas[bIdx].racks[i.r].name; 
+                let timeInWh = calcTimeDiff(i.fIng);
+                let age = calcTimeDiff(i.fComp);
+                
+                let notesArr = Array.isArray(i.notes) ? i.notes : (i.notes ? [i.notes] : []);
+                let urlsArr = Array.isArray(i.urls) ? i.urls : (i.url ? [i.url] : []);
+                
+                // VISUALIZADORES EN BUSQUEDA
+                let btnFact = globalDocs.facturas[i.fa] ? `<a href="#" onclick="viewDoc('fa','${i.fa}')" class="btn-doc-view"><i class="fas fa-eye"></i> Ver Factura</a>` : '';
+                let btnOC = globalDocs.ocs[i.oc] ? `<a href="#" onclick="viewDoc('oc','${i.oc}')" class="btn-doc-view"><i class="fas fa-eye"></i> Ver OC</a>` : '';
+
+                let validationBlock = !i.verified ? `
+                    <button id="btnShowVerify_${i.id}" onclick="document.getElementById('verifySectionSearch_${i.id}').style.display='block'; this.style.display='none';" style="width:100%; margin-top:10px; background:var(--primary); color:white; border:none; padding:8px; border-radius:6px; font-weight:bold; cursor:pointer;"><i class="fas fa-shield-alt"></i> Validar Ubicación</button>
+                    <div id="verifySectionSearch_${i.id}" class="verify-section" style="display:none; margin-top:10px; border:1px dashed #cbd5e1; background:#fff;">
+                        <div style="text-align:center; margin-bottom:5px; color:#64748b; font-size:10px;">Escanee códigos para validar</div>
+                        <input type="text" id="scanLocSearch_${i.id}" class="scan-input" placeholder="QR Ubicación" onkeyup="checkSearchVerify('${i.id}')">
+                        <input type="text" id="scanIdSearch_${i.id}" class="scan-input" placeholder="QR Equipo" onkeyup="checkSearchVerify('${i.id}')">
+                        <button id="btnConfSearch_${i.id}" onclick="processSearchVerify('${i.id}')" style="width:100%; padding:8px; background:#cbd5e1; color:white; border:none; border-radius:6px; font-weight:bold; cursor:not-allowed;" disabled>CONFIRMAR</button>
+                    </div>
+                ` : `<div style="text-align:center; color:var(--verified); font-weight:bold; margin-top:10px; font-size:11px;"><i class="fas fa-check-circle"></i> Ubicación Verificada</div>`;
+
+                return `
+                <div class="search-card-full">
+                    <div class="search-header">
+                        <div class="search-title"><i class="fas fa-map-marker-alt" style="color:#ef4444"></i> ${rName} - N${i.n}</div>
+                    </div>
+                    <div class="search-grid">
+                        <span class="search-label">ID:</span> <span class="search-val">${i.id}</span>
+                        <span class="search-label">Serie:</span> <span class="search-val">${i.sn||'-'}</span>
+                        <span class="search-label">Marca:</span> <span class="search-val">${i.brand||'-'}</span>
+                        <span class="search-label">Modelo:</span> <span class="search-val">${i.model||'-'}</span>
+                        <span class="search-label">Tipo:</span> <span class="search-val">${i.tip}</span>
+                        <span class="search-label">Estatus:</span> <span class="search-val">${i.st}</span>
+                        <span class="search-label">Host:</span> <span class="search-val">${i.host||'-'}</span>
+                        <span class="search-label">OC:</span> <span class="search-val">${i.oc||'-'} ${btnOC}</span>
+                        
+                        <div style="grid-column:span 2; border-top:1px solid #eee; margin:2px 0;"></div>
+                        
+                        <span class="search-label">Cía:</span> <span class="search-val">${i.ci}</span>
+                        <span class="search-label">Prov:</span> <span class="search-val">${i.prov||'-'}</span>
+                        <span class="search-label">Fact:</span> <span class="search-val">${i.fa||'-'} ${btnFact}</span>
+                        <span class="search-label">Usuario:</span> <span class="search-val">${i.usr||'-'}</span>
+                        <span class="search-label">Area:</span> <span class="search-val">${i.area||'-'}</span>
+                        <span class="search-label">CC:</span> <span class="search-val">${i.cc||'-'}</span>
+                        <span class="search-label">Canal:</span> <span class="search-val">${i.canal||'-'}</span>
+                        <span class="search-label">Email:</span> <span class="search-val">${i.email||'-'}</span>
+                        
+                        <div style="grid-column:span 2; border-top:1px solid #eee; margin:2px 0;"></div>
+
+                        <span class="search-label">En Almacén:</span> <span>${i.fIng||'-'} <span class="time-badge">${timeInWh}</span></span>
+                        <span class="search-label">Antigüedad:</span> <span>${i.fComp||'-'} <span class="time-badge">${age}</span></span>
+                        
+                        <div style="grid-column:span 2; margin-top:5px;">
+                             <div class="search-section-header"><span class="search-section-title"><i class="fas fa-sticky-note"></i> Notas</span><i class="fas fa-plus mini-btn add" onclick="manageExtras('${i.id}', 'notes', 'add')" title="Agregar Nota"></i></div>
+                            ${notesArr.length > 0 ? notesArr.map((n, idx) => `<div class="search-extra-row"><div class="search-extra-content">${n}</div><div class="search-extra-actions"><i class="fas fa-pen mini-btn edit" onclick="manageExtras('${i.id}', 'notes', 'edit', ${idx})"></i><i class="fas fa-trash mini-btn del" onclick="manageExtras('${i.id}', 'notes', 'del', ${idx})"></i></div></div>`).join('') : '<div style="font-size:10px; color:#ccc; font-style:italic;">Sin notas registradas</div>'}
+                        </div>
+
+                        <div style="grid-column:span 2; margin-top:5px;">
+                             <div class="search-section-header"><span class="search-section-title"><i class="fas fa-link"></i> Enlaces</span><i class="fas fa-plus mini-btn add" onclick="manageExtras('${i.id}', 'urls', 'add')" title="Agregar Link"></i></div>
+                            ${urlsArr.length > 0 ? urlsArr.map((u, idx) => `
+                                <div class="search-extra-row">
+                                    <div class="search-extra-content"><a href="${u}" target="_blank" style="color:var(--accent);text-decoration:none;">${u}</a></div>
+                                    <div class="search-extra-actions">
+                                        <i class="fas fa-pen mini-btn edit" onclick="manageExtras('${i.id}', 'urls', 'edit', ${idx})"></i>
+                                        <i class="fas fa-trash mini-btn del" onclick="manageExtras('${i.id}', 'urls', 'del', ${idx})"></i>
+                                    </div>
+                                </div>
+                            `).join('') : '<div style="font-size:10px; color:#ccc; font-style:italic;">Sin enlaces registrados</div>'}
+                        </div>
+                    </div>
+                    <div style="display:flex; gap:5px; margin-top:10px;">
+                        <button onclick="reimprimir('${i.id}')" style="flex:1; background:var(--accent); color:white; border:none; padding:8px; border-radius:6px; font-weight:bold; cursor:pointer;"><i class="fas fa-print"></i> Etiqueta</button>
+                        <button onclick="downloadPDF('${i.id}')" style="flex:1; background:var(--pdf); color:white; border:none; padding:8px; border-radius:6px; font-weight:bold; cursor:pointer;"><i class="fas fa-file-pdf"></i> PDF</button>
+                    </div>
+                    ${validationBlock}
+                </div>
+                `;
+            }).join('');
+            res.innerHTML = html;
+        } else { 
+            res.style.display = 'none'; 
+        } 
+    }
+
+    // --- CORE ---
+    function registrar() {
+        let id = document.getElementById('idA').value; if(!id) return alert("Falta ID");
+        let op = document.getElementById('operador').value || 'Sin Operador';
+        let wh = bodegas[bIdx]; let st = document.getElementById('stA').value;
+        let usr="", email="", host="", area="", cc="", canal="";
+        
+        if(st.toLowerCase().includes('vacante')) { 
+            let uInput = document.getElementById('usrA'); let eInput = document.getElementById('emailA'); let hInput = document.getElementById('hostA');
+            let areaInput = document.getElementById('areaA'); let ccInput = document.getElementById('ccA'); let canalInput = document.getElementById('canalA');
+            if(uInput) usr = uInput.value; if(eInput) email = eInput.value; if(hInput) host = hInput.value;
+            if(areaInput) area = areaInput.value; if(ccInput) cc = ccInput.value; if(canalInput) canal = canalInput.value;
+            if(!usr || !email || !host || !area || !cc || !canal) return alert("Faltan datos obligatorios para equipo vacante"); 
+        } 
+
+        let oc = document.getElementById('ocA').value;
+        let model = document.getElementById('modelA').value;
+        let brand = document.getElementById('brandA').value;
+        
+        let notesVal = document.getElementById('notesA').value;
+        let notes = notesVal ? [notesVal] : [];
+        
+        let urlVal = document.getElementById('urlA').value;
+        let urls = urlVal ? [urlVal] : [];
+
+        let dest = document.getElementById('destRack').value; let rStart=0; let rEnd=wh.racks.length;
+        if(dest!=='auto'){ rStart=parseInt(dest); rEnd=rStart+1; }
+        let tLevel = rules.statusToLevel[st];
+        for(let r=rStart; r<rEnd; r++) {
+            let rack = wh.racks[r];
+            let nStart = tLevel?tLevel:1; let nEnd = tLevel?tLevel:rack.levels;
+            for(let n=nStart; n<=nEnd; n++) {
+                if(n>rack.levels) continue;
+                let cap = (rack.capacities&&rack.capacities[n])?rack.capacities[n]:15;
+                if(wh.inv.filter(e=>e.r===r && e.n===n).length < cap) {
+                    let eq = { id, r, n, sn:document.getElementById('snA').value, model, brand, host, area, cc, canal, oc, notes, urls, fIng:document.getElementById('fIng').value, fComp:document.getElementById('fComp').value, fa:document.getElementById('faA').value, prov:document.getElementById('provA').value, ci:document.getElementById('ciA').value, tip:document.getElementById('tipA').value, st, usr, email, bod: wh.nombre, verified: false };
+                    wh.inv.push(eq);
+                    auditLog.unshift({fecha: new Date().toLocaleString(), bod: wh.nombre, op: op, ev: "ALTA", id: id, info: `${eq.tip} ${eq.sn||''}`, loc: `${rack.name}-N${n}`});
+                    imprimirQR(eq); limpiarCampos(); 
+                    saveDB(); // GUARDAR
+                    renderAll(); return;
+                }
+            }
+        }
+        alert("Sin espacio disponible o reglas de asignación no válidas.");
+    }
+
+    function checkVacante() {
+        let stVal = document.getElementById('stA').value;
+        let fields = document.getElementById('vacanteFields');
+        if(fields) {
+            fields.style.display = (stVal && stVal.toLowerCase().includes('vacante')) ? 'block' : 'none';
+        }
+    }
+
+    // ... Funciones
+    function nuevaBodega() { let n = prompt("Nombre:"); if(n) { bodegas.push({nombre:n, racks:[{name:"R1", levels:4, levelNames:{}, capacities:{}}], inv:[]}); bIdx=bodegas.length-1; saveDB(); renderAll(); } }
+    function renombrarBodega() { let n = prompt("Nombre:", bodegas[bIdx].nombre); if(n) { bodegas[bIdx].nombre=n; saveDB(); renderAll(); } }
+    function addRack() { let n="R"+(bodegas[bIdx].racks.length+1); bodegas[bIdx].racks.push({name:n, levels:4, levelNames:{}, capacities:{}}); saveDB(); renderAll(); }
+    function borrarRack(rIdx) { if(bodegas[bIdx].inv.some(e=>e.r===rIdx)) return alert("Rack no vacío"); if(confirm("¿Eliminar?")) { bodegas[bIdx].racks.splice(rIdx,1); bodegas[bIdx].inv.forEach(e=>{if(e.r>rIdx)e.r--}); saveDB(); renderAll(); } }
+    function editRackName(rIdx) { let n=prompt("Nombre:", bodegas[bIdx].racks[rIdx].name); if(n) { bodegas[bIdx].racks[rIdx].name=n; saveDB(); renderAll(); } }
+    function modLev(rIdx, v) { bodegas[bIdx].racks[rIdx].levels = Math.max(1, bodegas[bIdx].racks[rIdx].levels+v); saveDB(); renderAll(); }
+    function configNivel(rIdx, lIdx) {
+        let rack = bodegas[bIdx].racks[rIdx]; if(!rack.levelNames) rack.levelNames={}; if(!rack.capacities) rack.capacities={};
+        let nName = prompt(`Nombre Nivel ${lIdx}:`, rack.levelNames[lIdx]||""); if(nName!==null) rack.levelNames[lIdx]=nName;
+        let nCap = prompt(`Capacidad Nivel ${lIdx}:`, rack.capacities[lIdx]||15); if(nCap!==null) rack.capacities[lIdx]=parseInt(nCap)||15; 
+        saveDB(); renderAll();
+    }
+    function configuringRules(type) { }
+    function configurarReglaTipo() { let t=document.getElementById('tipA').value; let r=prompt(`Rack destino para '${t}':`); if(r!==null){if(r==="")delete rules.typeToRack[t];else rules.typeToRack[t]=r; alert("Regla guardada"); saveDB(); aplicarReglaTipo();} }
+    function configurarReglaStatus() { let s=document.getElementById('stA').value; let l=prompt(`Nivel destino para '${s}':`); if(l!==null){if(l==="")delete rules.statusToLevel[s];else rules.statusToLevel[s]=parseInt(l); alert("Regla guardada"); saveDB();} }
+    function aplicarReglaTipo() { let t=document.getElementById('tipA').value; let rName=rules.typeToRack[t]; let d=document.getElementById('destRack'); if(rName){let idx=bodegas[bIdx].racks.findIndex(r=>r.name===rName); if(idx!==-1) d.value=idx;} else if(!pins.Dest) d.value='auto'; }
+
+    // GESTION LISTAS (MARCA / MODELO)
+    function addOption(id) { let v = prompt("Opción:"); if(v){opciones[id].push(v); fillSelects(); saveDB();} }
+    function saveToList(id) { 
+        let val = document.getElementById(id).value; 
+        if(val && !opciones[id].includes(val)) { 
+            opciones[id].push(val); fillSelects(); alert("Guardado en lista"); saveDB();
+        } 
+    }
+    function delFromList(id) {
+        let val = document.getElementById(id).value;
+        if(val && opciones[id].includes(val)) {
+            opciones[id] = opciones[id].filter(x => x !== val); fillSelects(); document.getElementById(id).value = ""; alert("Eliminado de lista"); saveDB();
+        }
+    }
+    function fillSelects() { 
+        let d = document.getElementById('destRack'); let currentDest = d.value; 
+        let rackOpts = `<option value="auto">Automático (Inteligente)</option>`; 
+        bodegas[bIdx].racks.forEach((r, i) => { rackOpts += `<option value="${i}">${r.name}</option>`; }); 
+        d.innerHTML = rackOpts; if(currentDest && currentDest !== 'auto' && parseInt(currentDest) < bodegas[bIdx].racks.length) d.value = currentDest; 
+        
+        for(let id in opciones) { 
+            let el = document.getElementById(id.replace('A', 'A') === id ? id : 'list'+id); 
+            if(id === 'brandA') el = document.getElementById('listBrandA');
+            if(id === 'modelA') el = document.getElementById('listModelA');
+            
+            let optsHTML = opciones[id].map(o=>`<option value="${o}">${o}</option>`).join('');
+            if(el) el.innerHTML = optsHTML;
+        } 
+    }
+
+    function moverItem(ev, r, n) {
+        let id = ev.dataTransfer.getData("tid"); let wh = bodegas[bIdx];
+        let rack = wh.racks[r]; let cap = (rack.capacities&&rack.capacities[n])?rack.capacities[n]:15;
+        if(wh.inv.filter(e=>e.r===r && e.n===n).length >= cap) return alert("Nivel lleno");
+        let op = document.getElementById('operador').value || 'Sin Operador';
+        let eq = wh.inv.find(e => e.id === id);
+        
+        if(eq) { 
+            // Si viene de recepcion (r=-1), registrar confirmacion
+            let wasPending = (eq.r === -1);
+            
+            eq.r = r; eq.n = n; eq.verified = false; 
+            
+            let eventType = wasPending ? "RECEPCION CONFIRMADA" : "MOVER";
+            auditLog.unshift({fecha: new Date().toLocaleString(), bod: wh.nombre, op: op, ev: eventType, id: id, info: `${eq.tip} ${eq.sn||''}`, loc: `${rack.name}-N${n}`}); 
+            saveDB(); // GUARDAR
+            renderAll(); 
+            
+            if(wasPending) alert("Equipo recibido y ubicado. Proceda a reetiquetar.");
+        }
+    }
+    
+    // --- DRAG & DROP TRASPASO ---
+    function allowDrop(ev) {
+        ev.preventDefault();
+        if(ev.target.classList.contains('btn-transfer-drop')) ev.target.classList.add('dragover');
+        if(ev.target.classList.contains('btn-output-drop')) ev.target.classList.add('dragover');
+    }
+    
+    function dropToTransfer(ev) {
+        ev.preventDefault();
+        document.getElementById('btnDropZone').classList.remove('dragover');
+        let id = ev.dataTransfer.getData("tid");
+        addToTransferQueue(id);
+    }
+
+    // --- NUEVO: DROP TO OUTPUT ---
+    function dropToOutput(ev) {
+        ev.preventDefault();
+        document.getElementById('btnOutputZone').classList.remove('dragover');
+        let id = ev.dataTransfer.getData("tid");
+        addToOutputQueue(id);
+    }
+    
+    function addToTransferQueue(id) {
+        let item = bodegas[bIdx].inv.find(e => e.id === id);
+        if(!item) return;
+        if(item.r === -1) return alert("Debe recibir y ubicar este equipo antes de traspasarlo de nuevo.");
+        
+        if(!transferQueue.find(t => t.id === id)) {
+            transferQueue.push(item);
+            updateTransferBadge();
+        }
+    }
+
+    function addToOutputQueue(id) {
+        let item = bodegas[bIdx].inv.find(e => e.id === id);
+        if(!item) return;
+        if(!outputQueue.find(t => t.id === id)) {
+            outputQueue.push(item);
+            updateOutputBadge();
+        }
+    }
+    
+    function updateTransferBadge() {
+        let b = document.getElementById('transferBadge');
+        b.innerText = transferQueue.length;
+        b.style.display = transferQueue.length > 0 ? 'flex' : 'none';
+    }
+
+    function updateOutputBadge() {
+        let b = document.getElementById('outputBadge');
+        b.innerText = outputQueue.length;
+        b.style.display = outputQueue.length > 0 ? 'flex' : 'none';
+    }
+    
+    function openTransferModal() {
+        if(transferQueue.length === 0) return alert("Arrastre equipos a la zona de traspaso primero.");
+        
+        let sel = document.getElementById('transferDestWh');
+        sel.innerHTML = bodegas.map((b, i) => i !== bIdx ? `<option value="${i}">${b.nombre}</option>` : '').join('');
+        document.getElementById('transferReason').value = "";
+        renderTransferList();
+        document.getElementById('transferModal').style.display = 'flex';
+    }
+
+    function openOutputModal() {
+        if(outputQueue.length === 0) return alert("Arrastre equipos a la zona de salidas primero.");
+        document.getElementById('outputDoc').value = "";
+        document.getElementById('outputObs').value = "";
+        renderOutputList();
+        document.getElementById('outputModal').style.display = 'flex';
+    }
+    
+    function closeTransferModal() { document.getElementById('transferModal').style.display = 'none'; }
+    function closeOutputModal() { document.getElementById('outputModal').style.display = 'none'; }
+    
+    function renderTransferList() {
+        let c = document.getElementById('transferQueueList');
+        c.innerHTML = transferQueue.map((item, idx) => `
+            <div class="transfer-queue-item">
+                <i class="fas fa-times-circle btn-remove-transfer" onclick="removeFromTransfer(${idx})"></i>
+                <div style="font-weight:bold; color:#d97706;">${item.id}</div>
+                <div style="color:#64748b;">${item.model||item.tip}</div>
+            </div>
+        `).join('');
+    }
+
+    function renderOutputList() {
+        let c = document.getElementById('outputQueueList');
+        c.innerHTML = outputQueue.map((item, idx) => `
+            <div class="output-queue-item">
+                <i class="fas fa-times-circle btn-remove-transfer" onclick="removeFromOutput(${idx})"></i>
+                <div style="font-weight:bold; color:#475569;">${item.id}</div>
+                <div style="color:#64748b;">${item.model||item.tip}</div>
+            </div>
+        `).join('');
+    }
+    
+    function removeFromTransfer(idx) {
+        transferQueue.splice(idx, 1);
+        updateTransferBadge();
+        renderTransferList();
+        if(transferQueue.length === 0) closeTransferModal();
+    }
+
+    function removeFromOutput(idx) {
+        outputQueue.splice(idx, 1);
+        updateOutputBadge();
+        renderOutputList();
+        if(outputQueue.length === 0) closeOutputModal();
+    }
+    
+    function clearTransferQueue() {
+        if(confirm("¿Limpiar toda la cola?")) {
+            transferQueue = [];
+            updateTransferBadge();
+            closeTransferModal();
+        }
+    }
+
+    function clearOutputQueue() {
+        if(confirm("¿Limpiar toda la cola de salidas?")) {
+            outputQueue = [];
+            updateOutputBadge();
+            closeOutputModal();
+        }
+    }
+    
+    function executeTransfer() {
+        let destIdx = parseInt(document.getElementById('transferDestWh').value);
+        if(isNaN(destIdx)) return alert("Seleccione bodega destino");
+        let reason = document.getElementById('transferReason').value.trim();
+        if(!reason) return alert("Por favor, ingrese el Motivo del Traspaso.");
+
+        let destWh = bodegas[destIdx];
+        let op = document.getElementById('operador').value || 'Sin Operador';
+        
+        transferQueue.forEach(item => {
+            let srcIdx = bodegas[bIdx].inv.findIndex(e => e.id === item.id);
+            if(srcIdx > -1) bodegas[bIdx].inv.splice(srcIdx, 1);
+            
+            item.bod = destWh.nombre;
+            item.r = -1; // -1 indica "En Recepción" (Zona Roja)
+            item.n = 0; 
+            item.verified = false; 
+            if(!item.notes) item.notes = [];
+            item.notes.push(`TRASPASO RECIENTE: ${reason}`);
+
+            destWh.inv.push(item);
+            
+            auditLog.unshift({fecha: new Date().toLocaleString(), bod: bodegas[bIdx].nombre, op: op, ev: "TRASPASO OUT", id: item.id, info: `Hacia ${destWh.nombre} [Motivo: ${reason}]`, loc: "En tránsito"});
+            auditLog.unshift({fecha: new Date().toLocaleString(), bod: destWh.nombre, op: op, ev: "TRASPASO IN (PEND)", id: item.id, info: `Desde ${bodegas[bIdx].nombre} [Motivo: ${reason}]`, loc: "Zona Recepción"});
+        });
+        
+        alert(`Traspaso de ${transferQueue.length} equipos enviado a Zona de Recepción de ${destWh.nombre}.`);
+        transferQueue = [];
+        updateTransferBadge();
+        closeTransferModal();
+        saveDB(); // GUARDAR
+        renderAll();
+    }
+
+    function executeOutput() {
+        let type = document.getElementById('outputType').value;
+        let doc = document.getElementById('outputDoc').value;
+        let obs = document.getElementById('outputObs').value;
+        
+        if(!doc) return alert("Ingrese un documento de respaldo (Ticket, Acta, etc).");
+        
+        let op = document.getElementById('operador').value || 'Sin Operador';
+
+        outputQueue.forEach(item => {
+            let srcIdx = bodegas[bIdx].inv.findIndex(e => e.id === item.id);
+            if(srcIdx > -1) bodegas[bIdx].inv.splice(srcIdx, 1);
+            
+            auditLog.unshift({
+                fecha: new Date().toLocaleString(), 
+                bod: bodegas[bIdx].nombre, 
+                op: op, 
+                ev: "SALIDA - " + type, 
+                id: item.id, 
+                info: `Doc: ${doc} | Obs: ${obs}`, 
+                loc: "FUERA DE INVENTARIO"
+            });
+        });
+
+        alert(`Salida confirmada de ${outputQueue.length} equipos.`);
+        outputQueue = [];
+        updateOutputBadge();
+        closeOutputModal();
+        saveDB(); // GUARDAR
+        renderAll();
+    }
+    
+    function verNivel(r, n) {
+        document.getElementById('rackSummaryView').style.display='none'; // Ocultar resumen de rack completo si estaba abierto
+        let wh = bodegas[bIdx]; let items = wh.inv.filter(e => e.r === r && e.n === n);
+        let c = items.map(e => `<tr><td style="text-align:center"><input type="checkbox" class="transfer-chk" value="${e.id}"></td><td style="font-weight:bold">${e.id}</td><td>${e.sn||'-'}</td><td>${e.brand||'-'}</td><td>${e.model||'-'}</td><td>${e.host||'-'}</td><td>${e.tip}</td><td>${e.st}</td><td>${e.oc||'-'}</td><td>${e.ci}</td><td>${e.prov||'-'}</td><td>${e.fa||'-'}</td><td>${e.fIng||'-'}</td><td>${e.fComp||'-'}</td><td>${e.usr||'-'}</td><td>${e.email||'-'}</td><td style="text-align:center"><i class="fas fa-tag action-icon icon-print" onclick="reimprimir('${e.id}')"></i></td></tr>`).join('');
+        document.getElementById('modalContent').innerHTML = c || '<tr><td colspan="17" style="text-align:center; padding:10px; color:#ccc">Nivel Vacío</td></tr>';
+        document.getElementById('modalTitle').innerText = `${wh.racks[r].name} - Nivel ${n} [${items.length}]`;
+        document.getElementById('levelActions').innerHTML = `
+            <button class="btn-dl-level" onclick="descargarNivel(${r}, ${n})"><i class="fas fa-file-csv"></i> Descargar</button> 
+            <button class="btn-dl-level" style="background:var(--primary);margin-left:5px" onclick="printLevelQR(${r}, ${n})"><i class="fas fa-qrcode"></i> QR</button>
+            <button class="btn-dl-level" style="background:#f59e0b;margin-left:5px; color:white;" onclick="addSelectedToTransfer()"><i class="fas fa-dolly"></i> Traspaso</button>
+        `;
+        document.getElementById('detailModal').style.display = 'flex';
+    }
+    
+    // --- VISTA COMPLETA RACK + RESUMEN VISUAL (DEL MODULO DE SALIDA) ---
+    function verRack(r) {
+        let wh = bodegas[bIdx];
+        let items = wh.inv.filter(e => e.r === r);
+        let rack = wh.racks[r];
+        items.sort((a,b) => b.n - a.n);
+
+        // --- NEW: RACK SUMMARY BADGES ---
+        let summaryHTML = "";
+        for(let l=rack.levels; l>=1; l--) {
+            let count = items.filter(e => e.n === l).length;
+            let cap = rack.capacities[l] || 15;
+            let color = count >= cap ? '#ef4444' : (count >= cap/2 ? '#f59e0b' : '#10b981');
+            summaryHTML += `<div class="level-summary-badge" style="background:${color}">N${l}<br>${count}/${cap}</div>`;
+        }
+        let summaryDiv = document.getElementById('rackSummaryView');
+        summaryDiv.innerHTML = summaryHTML;
+        summaryDiv.style.display = 'flex';
+
+        // TABLA LISTADO
+        let c = items.map(e => `<tr><td style="text-align:center"><input type="checkbox" class="transfer-chk" value="${e.id}"></td><td style="font-weight:bold">${e.id}</td><td>${e.sn||'-'}</td><td>${e.brand||'-'}</td><td>${e.model||'-'}</td><td>${e.host||'-'}</td><td>${e.tip}</td><td>${e.st}</td><td>${e.oc||'-'}</td><td>${e.ci}</td><td>${e.prov||'-'}</td><td>${e.fa||'-'}</td><td>${e.fIng||'-'}</td><td>${e.fComp||'-'}</td><td>${e.usr||'-'}</td><td>${e.email||'-'}</td><td style="text-align:center"><i class="fas fa-tag action-icon icon-print" onclick="reimprimir('${e.id}')"></i></td></tr>`).join('');
+        
+        document.getElementById('modalContent').innerHTML = c || '<tr><td colspan="17" style="text-align:center; padding:10px; color:#ccc">Rack Vacío</td></tr>';
+        document.getElementById('modalTitle').innerText = `${wh.racks[r].name} - Contenido Total [${items.length}]`;
+        
+        document.getElementById('levelActions').innerHTML = `
+            <button class="btn-dl-level" onclick="descargarRack(${r})"><i class="fas fa-file-csv"></i> Descargar Rack</button>
+            <button class="btn-dl-level" style="background:#f59e0b;margin-left:5px; color:white;" onclick="addSelectedToTransfer()"><i class="fas fa-dolly"></i> Traspaso</button>
+        `;
+        document.getElementById('detailModal').style.display = 'flex';
+    }
+
+    function descargarRack(r) {
+        let wh = bodegas[bIdx]; 
+        let items = wh.inv.filter(e => e.r === r);
+        if(items.length === 0) return alert("Rack vacío");
+
+        let csv = "Bodega,Rack,Nivel,ID,Serie,Marca,Modelo,Hostname,Tipo,Estatus,Cia,Prov,Fact,OC,F_Ing,F_Comp,Usuario,Correo,Area,CC,Canal,Notas,URL,Verificado\n";
+        items.forEach(e => { 
+            csv += `"${wh.nombre}","${wh.racks[r].name}","${e.n}","${e.id}","${e.sn||''}","${e.brand||''}","${e.model||''}","${e.host||''}","${e.tip}","${e.st}","${e.ci}","${e.prov||''}","${e.fa||''}","${e.oc||''}","${e.fIng||''}","${e.fComp||''}","${e.usr||''}","${e.email||''}","${e.area||''}","${e.cc||''}","${e.canal||''}","${(e.notes||[]).join('; ')}","${(e.urls||[]).join('; ')}","${e.verified?'SI':'NO'}"\n`; 
+        });
+        downloadCSV(csv, `Reporte_Rack_${wh.racks[r].name}.csv`);
+    }
+    
+    function addSelectedToTransfer() {
+        let chks = document.querySelectorAll('.transfer-chk:checked');
+        if(chks.length === 0) return alert("Seleccione al menos un equipo.");
+        let count = 0;
+        chks.forEach(c => {
+            addToTransferQueue(c.value);
+            count++;
+        });
+        alert(`${count} equipos añadidos a la cola de traspaso.`);
+        document.querySelectorAll('.transfer-chk').forEach(c => c.checked = false);
+    }
+
+    function printLevelQR(r, n) {
+        let wh = bodegas[bIdx];
+        let rackName = wh.racks[r].name;
+        let qrData = `${rackName}-N${n}`; 
+        let box = document.getElementById("qrPlace"); box.innerHTML = "";
+        new QRCode(box, {text: qrData, width: 130, height: 130});
+        setTimeout(() => {
+            let printContent = `
+                <div style="text-align:center; font-family:sans-serif; width:300px; padding:20px; border:2px solid #000;">
+                    <h2>UBICACIÓN</h2>
+                    <h1 style="font-size:40px; margin:10px 0;">${rackName} - N${n}</h1>
+                    <div style="margin:20px auto; display:inline-block;">${box.innerHTML}</div>
+                    <p>${wh.nombre}</p>
+                </div>
+            `;
+            let w=window.open('','','width=350,height=400');
+            w.document.write('<html><head><title>Etiqueta Ubicación</title></head><body style="display:flex;justify-content:center;align-items:center;">'+printContent+'</body></html>');
+            w.document.close(); w.focus(); setTimeout(()=>{w.print();w.close()},500);
+        }, 300);
+    }
+
+    function descargarNivel(r, n) {
+        let wh = bodegas[bIdx]; let items = wh.inv.filter(e => e.r === r && e.n === n);
+        let csv = "Bodega,ID,Serie,Marca,Modelo,Hostname,Tipo,Estatus,Cia,Prov,Fact,OC,F_Ing,F_Comp,Usuario,Correo,Area,CC,Canal,Notas,URL,Ubicacion,Verificado\n";
+        items.forEach(e => { csv += `"${wh.nombre}","${e.id}","${e.sn||''}","${e.brand||''}","${e.model||''}","${e.host||''}","${e.tip}","${e.st}","${e.ci}","${e.prov||''}","${e.fa||''}","${e.oc||''}","${e.fIng||''}","${e.fComp||''}","${e.usr||''}","${e.email||''}","${e.area||''}","${e.cc||''}","${e.canal||''}","${(e.notes||[]).join('; ')}","${(e.urls||[]).join('; ')}","${wh.racks[r].name}-N${n}","${e.verified?'SI':'NO'}"\n`; });
+        downloadCSV(csv, `Reporte_${wh.racks[r].name}_N${n}.csv`);
+    }
+
+    function checkVerification(id) {
+        let loc = document.getElementById('scanLoc').value.trim().toUpperCase();
+        let scannedId = document.getElementById('scanId').value.trim();
+        let item = bodegas[bIdx].inv.find(e => e.id === id);
+        let rackName = bodegas[bIdx].racks[item.r]?.name || "Recepcion";
+        let expectedLoc = item.r === -1 ? "RECEPCION" : `${rackName}-N${item.n}`.toUpperCase();
+        let btn = document.getElementById('btnConfirmVerify');
+        let msg = document.getElementById('scanMsg');
+        if (loc === expectedLoc && scannedId === item.id) {
+            btn.disabled = false; btn.style.background = "var(--success)"; btn.style.cursor = "pointer";
+            msg.innerHTML = '<i class="fas fa-check-circle"></i> Códigos Correctos'; msg.style.color = "var(--success)";
+        } else {
+            btn.disabled = true; btn.style.background = "#cbd5e1"; btn.style.cursor = "not-allowed";
+            if(loc && scannedId) { msg.innerHTML = '<i class="fas fa-times-circle"></i> Incorrecto'; msg.style.color = "var(--danger)"; } else msg.innerHTML = "";
+        }
+    }
+
+    function processVerification(id) {
+        let item = bodegas[bIdx].inv.find(e => e.id === id);
+        if (item) { item.verified = true; saveDB(); renderAll(); verItem(id); alert("¡Ubicación Validada!"); }
+    }
+
+    function verItem(id) {
+        let item = bodegas[bIdx].inv.find(e => e.id === id); if(!item) return;
+        let rName = item.r === -1 ? "ZONA RECEPCION" : bodegas[bIdx].racks[item.r].name;
+        
+        let timeInWh = calcTimeDiff(item.fIng);
+        let age = calcTimeDiff(item.fComp);
+        
+        // Asegurar arrays
+        let notesArr = Array.isArray(item.notes) ? item.notes : (item.notes ? [item.notes] : []);
+        let urlsArr = Array.isArray(item.urls) ? item.urls : (item.url ? [item.url] : []);
+        
+        // CHECK DOCS
+        let btnFact = globalDocs.facturas[item.fa] ? `<a href="#" onclick="viewDoc('fa','${item.fa}')" class="btn-doc-view"><i class="fas fa-eye"></i> Ver Factura</a>` : '';
+        let btnOC = globalDocs.ocs[item.oc] ? `<a href="#" onclick="viewDoc('oc','${item.oc}')" class="btn-doc-view"><i class="fas fa-eye"></i> Ver OC</a>` : '';
+
+        let validationSection = !item.verified ? `
+            <button onclick="document.getElementById('verifySection').style.display='block'; this.style.display='none';" style="width:100%; margin-top:5px; background:var(--primary); color:white; border:none; padding:12px; border-radius:8px; font-weight:bold; cursor:pointer;"><i class="fas fa-shield-alt"></i> Validar Ubicación</button>
+            <div id="verifySection" class="verify-section">
+                <div style="text-align:center; margin-bottom:10px; color:#64748b; font-size:12px;">Escanee códigos para validar</div>
+                <input type="text" id="scanLoc" class="scan-input" placeholder="QR Ubicación (Ej: R1-N1)" onkeyup="checkVerification('${item.id}')">
+                <input type="text" id="scanId" class="scan-input" placeholder="QR Equipo (ID)" onkeyup="checkVerification('${item.id}')">
+                <div id="scanMsg" style="text-align:center; font-weight:bold; font-size:12px; min-height:20px; margin-bottom:5px;"></div>
+                <button id="btnConfirmVerify" onclick="processVerification('${item.id}')" style="width:100%; padding:10px; background:#cbd5e1; color:white; border:none; border-radius:6px; font-weight:bold; cursor:not-allowed;" disabled>CONFIRMAR</button>
+            </div>
+        ` : `<div style="text-align:center; color:var(--verified); font-weight:bold; margin-top:10px; padding:10px; background:#ecfdf5; border-radius:8px;"><i class="fas fa-check-circle"></i> Ubicación Verificada</div>`;
+
+        let c = `<div style="margin-bottom:15px;">
+            <div class="detail-row"><span class="detail-label">ID</span><span class="detail-value">${item.id}</span></div>
+            <div class="detail-row"><span class="detail-label">Serie</span><span class="detail-value">${item.sn||'-'} <i class="fas fa-pen btn-edit-field" onclick="upd('${item.id}','sn','Serie')"></i></span></div>
+            <div class="detail-row"><span class="detail-label">Marca</span><span class="detail-value">${item.brand||'-'} <i class="fas fa-pen btn-edit-field" onclick="upd('${item.id}','brand','Marca')"></i></span></div>
+            <div class="detail-row"><span class="detail-label">Modelo</span><span class="detail-value">${item.model||'-'} <i class="fas fa-pen btn-edit-field" onclick="upd('${item.id}','model','Modelo')"></i></span></div>
+            <div class="detail-row"><span class="detail-label">Tipo</span><span class="detail-value">${item.tip} <i class="fas fa-pen btn-edit-field" onclick="upd('${item.id}','tip','Tipo')"></i></span></div>
+            <div class="detail-row"><span class="detail-label">Estatus</span><span class="detail-value">${item.st} <i class="fas fa-pen btn-edit-field" onclick="upd('${item.id}','st','Estatus')"></i></span></div>
+            <div class="detail-row"><span class="detail-label">Hostname</span><span class="detail-value">${item.host||'-'} <i class="fas fa-pen btn-edit-field" onclick="upd('${item.id}','host','Hostname')"></i></span></div>
+            <div class="detail-row"><span class="detail-label">OC</span><span class="detail-value">${item.oc||'-'} ${btnOC} <i class="fas fa-pen btn-edit-field" onclick="upd('${item.id}','oc','OC')"></i></span></div>
+            
+            <div style="margin:5px 0; border-top:1px solid #f1f5f9;"></div>
+
+            <div class="detail-row"><span class="detail-label">Cía</span><span class="detail-value">${item.ci}</span></div>
+            <div class="detail-row"><span class="detail-label">Proveedor</span><span class="detail-value">${item.prov||'-'} <i class="fas fa-pen btn-edit-field" onclick="upd('${item.id}','prov','Proveedor')"></i></span></div>
+            <div class="detail-row"><span class="detail-label">Factura</span><span class="detail-value">${item.fa||'-'} ${btnFact} <i class="fas fa-pen btn-edit-field" onclick="upd('${item.id}','fa','Fact')"></i></span></div>
+            <div class="detail-row"><span class="detail-label">Usuario</span><span class="detail-value">${item.usr||'-'} <i class="fas fa-pen btn-edit-field" onclick="upd('${item.id}','usr','Usuario')"></i></span></div>
+            <div class="detail-row"><span class="detail-label">Área</span><span class="detail-value">${item.area||'-'} <i class="fas fa-pen btn-edit-field" onclick="upd('${item.id}','area','Área')"></i></span></div>
+            <div class="detail-row"><span class="detail-label">CC</span><span class="detail-value">${item.cc||'-'} <i class="fas fa-pen btn-edit-field" onclick="upd('${item.id}','cc','Centro Costos')"></i></span></div>
+            <div class="detail-row"><span class="detail-label">Canal</span><span class="detail-value">${item.canal||'-'} <i class="fas fa-pen btn-edit-field" onclick="upd('${item.id}','canal','Canal')"></i></span></div>
+            <div class="detail-row"><span class="detail-label">Correo</span><span class="detail-value">${item.email||'-'} <i class="fas fa-pen btn-edit-field" onclick="upd('${item.id}','email','Correo')"></i></span></div>
+
+            <div style="margin:5px 0; border-top:1px solid #f1f5f9;"></div>
+
+            <div class="detail-row"><span class="detail-label">F.Ingreso</span><span class="detail-value">${item.fIng||'-'} <span class="time-badge">${timeInWh}</span> <i class="fas fa-pen btn-edit-field" onclick="upd('${item.id}','fIng','Fecha Ing')"></i></span></div>
+            <div class="detail-row"><span class="detail-label">F.Compra</span><span class="detail-value">${item.fComp||'-'} <span class="time-badge">${age}</span> <i class="fas fa-pen btn-edit-field" onclick="upd('${item.id}','fComp','Fecha Comp')"></i></span></div>
+            <div class="detail-row"><span class="detail-label">Ubicación</span><span class="detail-value" style="color:var(--accent)">${rName}-N${item.n}</span></div>
+
+            <div style="margin-top:10px;">
+                 <div class="search-section-header">
+                    <span class="search-section-title"><i class="fas fa-sticky-note"></i> Notas</span>
+                    <i class="fas fa-plus mini-btn add" onclick="manageExtras('${item.id}', 'notes', 'add')" title="Agregar Nota"></i>
+                </div>
+                ${notesArr.length > 0 ? notesArr.map((n, idx) => `
+                    <div class="search-extra-row">
+                        <div class="search-extra-content">${n}</div>
+                        <div class="search-extra-actions">
+                            <i class="fas fa-pen mini-btn edit" onclick="manageExtras('${item.id}', 'notes', 'edit', ${idx})"></i>
+                            <i class="fas fa-trash mini-btn del" onclick="manageExtras('${item.id}', 'notes', 'del', ${idx})"></i>
+                        </div>
+                    </div>
+                `).join('') : '<div style="font-size:10px; color:#ccc; font-style:italic;">Sin notas registradas</div>'}
+            </div>
+
+            <div style="margin-top:5px;">
+                 <div class="search-section-header">
+                    <span class="search-section-title"><i class="fas fa-link"></i> Enlaces</span>
+                    <i class="fas fa-plus mini-btn add" onclick="manageExtras('${item.id}', 'urls', 'add')" title="Agregar Link"></i>
+                </div>
+                ${urlsArr.length > 0 ? urlsArr.map((u, idx) => `
+                    <div class="search-extra-row">
+                        <div class="search-extra-content"><a href="${u}" target="_blank" style="color:var(--accent);text-decoration:none;">${u}</a></div>
+                        <div class="search-extra-actions">
+                            <i class="fas fa-pen mini-btn edit" onclick="manageExtras('${item.id}', 'urls', 'edit', ${idx})"></i>
+                            <i class="fas fa-trash mini-btn del" onclick="manageExtras('${item.id}', 'urls', 'del', ${idx})"></i>
+                        </div>
+                    </div>
+                `).join('') : '<div style="font-size:10px; color:#ccc; font-style:italic;">Sin enlaces registrados</div>'}
+            </div>
+
+            <div style="display:flex; gap:5px; margin-top:15px;">
+                <button onclick="reimprimir('${item.id}')" style="flex:1; background:var(--accent); color:white; border:none; padding:12px; border-radius:8px; font-weight:bold; cursor:pointer;"><i class="fas fa-print"></i> Etiqueta</button>
+                <button onclick="downloadPDF('${item.id}')" style="flex:1; background:var(--pdf); color:white; border:none; padding:12px; border-radius:8px; font-weight:bold; cursor:pointer;"><i class="fas fa-file-pdf"></i> PDF</button>
+            </div>
+        </div>
+        ${validationSection}`;
+        document.getElementById('itemModalContent').innerHTML = c; document.getElementById('itemDetailModal').style.display='flex';
+    }
+    function upd(id, k, l) { let i=bodegas[bIdx].inv.find(e=>e.id===id); if(i){let v=prompt(`Nuevo ${l}:`, i[k]); if(v!==null){i[k]=v; saveDB(); renderAll(); verItem(id);}} }
+    function closeModal() { document.getElementById('detailModal').style.display='none'; }
+    function closeItemModal() { document.getElementById('itemDetailModal').style.display='none'; }
+
+    function renderMap() {
+        let wh = bodegas[bIdx]; document.getElementById('whTitle').innerText = wh.nombre;
+        
+        // SEPARAR ITEMS EN RACKS Y EN RECEPCION
+        let receivingItems = wh.inv.filter(e => e.r === -1);
+        let rackedItems = wh.inv.filter(e => e.r !== -1);
+        
+        // RENDERIZAR ZONA DE RECEPCION
+        let rxZone = document.getElementById('receivingZone');
+        let rxContent = document.getElementById('receivingContent');
+        let rxCount = document.getElementById('receivingCount');
+        
+        if(receivingItems.length > 0) {
+            rxZone.style.display = 'block';
+            rxCount.innerText = receivingItems.length;
+            rxContent.innerHTML = receivingItems.map(e => `
+                <div class="receiving-chip" draggable="true" ondragstart="event.dataTransfer.setData('tid','${e.id}')" onclick="verItem('${e.id}');">
+                    <div>${e.id}</div>
+                    <span>${e.model || e.tip}</span>
+                    <span style="font-size:8px; margin-top:4px; background:rgba(0,0,0,0.2); padding:2px 4px; border-radius:4px;">REETIQUETAR</span>
+                </div>
+            `).join('');
+        } else {
+            rxZone.style.display = 'none';
+        }
+
+        // RENDERIZAR RACKS NORMALES
+        let map = document.getElementById('wMap'); map.innerHTML = '';
+        wh.racks.forEach((rack, i) => {
+            let totalCap = 0; for(let l=1; l<=rack.levels; l++) totalCap += (rack.capacities[l] || 15);
+            let totalItems = rackedItems.filter(e => e.r === i).length;
+            let rackPct = totalCap > 0 ? Math.round((totalItems/totalCap)*100) : 0;
+            let barColor = rackPct >= 90 ? 'var(--danger)' : (rackPct >= 50 ? '#f59e0b' : 'var(--success)');
+            let h = `<div class="rack-card"><div class="rack-header"><div class="rack-top-row"><div style="display:flex;align-items:center;"><span class="rack-name" onclick="editRackName(${i})"><i class="fas fa-pen" style="font-size:10px; color:#94a3b8"></i> ${rack.name} <span style="font-size:10px; color:#64748b">(${rackPct}%)</span></span></div><div style="display:flex; gap:3px; align-items:center;"><i class="fas fa-eye btn-rack-view" onclick="verRack(${i})" title="Ver todo el Rack"></i><button onclick="modLev(${i},-1)">-</button><button onclick="modLev(${i},1)">+</button><i class="fas fa-trash-can btn-del-rack" onclick="borrarRack(${i})"></i></div></div><div class="rack-progress"><div class="rack-progress-bar" style="width:${rackPct}%; background:${barColor}"></div></div></div>`;
+            for(let n=rack.levels; n>=1; n--) {
+                let eqs = rackedItems.filter(e => e.r === i && e.n === n);
+                let lName = (rack.levelNames && rack.levelNames[n]) ? `-${rack.levelNames[n]}` : "";
+                let cap = (rack.capacities && rack.capacities[n]) ? rack.capacities[n] : 15;
+                let lvlPct = (eqs.length / cap);
+                let statusClass = lvlPct >= 0.9 ? 'bg-red' : (lvlPct >= 0.5 ? 'bg-orange' : 'bg-green');
+                h += `<div class="level-slot" ondragover="event.preventDefault()" ondrop="moverItem(event,${i},${n})">
+                    <div class="level-header">
+                        <span onclick="configNivel(${i}, ${n})"><span class="status-dot ${statusClass}"></span> N${n}${lName} [${eqs.length}/${cap}]</span>
+                        <div class="level-actions">
+                            <i class="fas fa-eye level-icon-btn" onclick="verNivel(${i}, ${n})" title="Ver Detalles"></i>
+                            <i class="fas fa-print level-icon-btn" onclick="printLevelQR(${i}, ${n})" title="Imprimir QR Ubicación"></i>
+                        </div>
+                    </div>
+                    ${eqs.map(e => `<div class="item-chip ${e.verified?'verified':''}" draggable="true" ondragstart="event.dataTransfer.setData('tid','${e.id}')" onclick="verItem('${e.id}'); event.stopPropagation();">${e.id}</div>`).join('')}
+                </div>`;
+            }
+            map.innerHTML += h + '</div>';
+        });
+    }
+
+    function renderTable() { 
+        let f=document.getElementById('tableFilter').value.toLowerCase(); let b=document.getElementById('tbBody'); b.innerHTML=""; 
+        if(currentTab==='stk'){ 
+            document.getElementById('tableHead').innerHTML=`<tr><th style='padding:5px'>ID</th><th>Serie</th><th>Marca</th><th>Modelo</th><th>F.Ing</th><th>Prov</th><th>Fact</th><th>OC</th><th>Cía</th><th>Tipo</th><th>St</th><th>Ubic</th><th style='text-align:center'>Acc</th></tr>`; 
+            bodegas[bIdx].inv.filter(e=>e.id.toLowerCase().includes(f)||e.tip.toLowerCase().includes(f)).forEach(e=>{
+                let rName = e.r === -1 ? "RECEPCION" : bodegas[bIdx].racks[e.r].name;
+                b.innerHTML+=`<tr><td style='padding:5px;font-weight:bold'>${e.id}</td><td>${e.sn||'-'}</td><td>${e.brand||'-'}</td><td>${e.model||'-'}</td><td>${e.fIng||'-'}</td><td>${e.prov||'-'}</td><td>${e.fa||'-'}</td><td>${e.oc||'-'}</td><td>${e.ci}</td><td>${e.tip}</td><td>${e.st}</td><td>${rName}-N${e.n}</td><td style='text-align:center'><i class="fas fa-print action-icon icon-print" onclick="reimprimir('${e.id}')"></i><i class="fas fa-pen action-icon icon-edit" onclick="upd('${e.id}','sn','Serie')"></i></td></tr>`
+            }) 
+        } else if (currentTab==='log') { 
+            document.getElementById('tableHead').innerHTML="<tr><th style='padding:8px'>Hora</th><th>Operador</th><th>Acción</th><th>ID</th><th>Detalle Equipo</th><th>Ubicación</th></tr>"; 
+            auditLog.filter(l=>l.id.toLowerCase().includes(f)||l.op.toLowerCase().includes(f)).forEach(l=>{b.innerHTML+=`<tr><td style='padding:5px'>${l.fecha.split(',')[1]}</td><td>${l.op}</td><td><b>${l.ev}</b></td><td>${l.id}</td><td>${l.info}</td><td>${l.loc}</td></tr>`}) 
+        } else if (currentTab === 'docs') {
+            document.getElementById('tableHead').innerHTML = "<tr><th>Tipo</th><th>Referencia</th><th>Relacionados</th><th>Acciones</th></tr>";
+            let docRows = "";
+            for(let key in globalDocs.facturas) {
+                if(key.toLowerCase().includes(f)) {
+                    let count = 0; bodegas.forEach(bo => count += bo.inv.filter(i => i.fa === key).length);
+                    docRows += `<tr><td><span class="doc-badge fa">Factura</span></td><td><b>${key}</b></td><td>${count} Equipos</td><td><button onclick="viewDoc('fa','${key}')" class="btn-doc-action" style="color:var(--accent)"><i class="fas fa-eye"></i></button> <button onclick="downloadDocReport('fa','${key}')" class="btn-doc-action" style="color:var(--success)"><i class="fas fa-file-excel"></i></button> <button onclick="deleteDoc('fa','${key}')" class="btn-doc-action" style="color:var(--danger)"><i class="fas fa-trash"></i></button></td></tr>`;
+                }
+            }
+            for(let key in globalDocs.ocs) {
+                if(key.toLowerCase().includes(f)) {
+                    let count = 0; bodegas.forEach(bo => count += bo.inv.filter(i => i.oc === key).length);
+                    docRows += `<tr><td><span class="doc-badge oc">Orden Compra</span></td><td><b>${key}</b></td><td>${count} Equipos</td><td><button onclick="viewDoc('oc','${key}')" class="btn-doc-action" style="color:var(--accent)"><i class="fas fa-eye"></i></button> <button onclick="downloadDocReport('oc','${key}')" class="btn-doc-action" style="color:var(--success)"><i class="fas fa-file-excel"></i></button> <button onclick="deleteDoc('oc','${key}')" class="btn-doc-action" style="color:var(--danger)"><i class="fas fa-trash"></i></button></td></tr>`;
+                }
+            }
+            if(docRows === "") docRows = "<tr><td colspan='4' style='text-align:center;color:#ccc;padding:20px;'>No hay documentos registrados</td></tr>";
+            b.innerHTML = docRows;
+        }
+    }
+
+    function descargarReporte(type) { 
+        let csv = ""; 
+        if(type==='stock'){csv="Bodega,ID,Serie,Marca,Modelo,Hostname,F_Ing,F_Comp,Prov,Fact,OC,Cia,Tipo,St,Usuario,Correo,Area,CC,Canal,Notas,URL,Ubic,Verificado\n";bodegas.forEach(b=>{b.inv.forEach(e=>{csv+=`"${b.nombre}","${e.id}","${e.sn||''}","${e.brand||''}","${e.model||''}","${e.host||''}","${e.fIng||''}","${e.fComp||''}","${e.prov||''}","${e.fa}","${e.oc||''}","${e.ci}","${e.tip}","${e.st}","${e.usr||''}","${e.email||''}","${e.area||''}","${e.cc||''}","${e.canal||''}","${e.notes||''}","${e.url||''}","R${e.r}-N${e.n}","${e.verified?'SI':'NO'}"\n`})})}else{csv="Fecha,Bodega,Operador,Evento,ID,Info_Equipo,Ubicacion\n";auditLog.forEach(l=>{csv+=`"${l.fecha}","${l.bod}","${l.op}","${l.ev}","${l.id}","${l.info}","${l.loc}"\n`})} 
+        downloadCSV(csv, `Rpt_${type}.csv`);
+    }
+    
+    function switchTab(t) { currentTab=t; document.getElementById('btnTabStk').classList.toggle('active', t==='stk'); document.getElementById('btnTabLog').classList.toggle('active', t==='log'); document.getElementById('btnTabDocs').classList.toggle('active', t==='docs'); renderTable(); }
+    function togglePin(f) { pins[f] = !pins[f]; document.getElementById(`pin${f}`).classList.toggle('active'); }
+    function fillSelects() { let d = document.getElementById('destRack'); let currentDest = d.value; let rackOpts = `<option value="auto">Automático (Inteligente)</option>`; bodegas[bIdx].racks.forEach((r, i) => { rackOpts += `<option value="${i}">${r.name}</option>`; }); d.innerHTML = rackOpts; if(currentDest && currentDest !== 'auto' && parseInt(currentDest) < bodegas[bIdx].racks.length) d.value = currentDest; for(let id in opciones) { let s=document.getElementById(id); let p=s.value; s.innerHTML=opciones[id].map(o=>`<option value="${o}">${o}</option>`).join(''); if(p)s.value=p; } }
+    function limpiarCampos() { if(!pins.Fa)document.getElementById('faA').value=""; if(!pins.Oc)document.getElementById('ocA').value=""; if(!pins.FComp)document.getElementById('fComp').value=""; if(!pins.FIng)document.getElementById('fIng').valueAsDate=new Date(); if(!pins.Dest)document.getElementById('destRack').value="auto"; document.getElementById('idA').value=""; document.getElementById('snA').value=""; 
+        if(!pins.Model) document.getElementById('modelA').value=""; if(!pins.Brand) document.getElementById('brandA').value="";
+        if(document.getElementById('hostA')) document.getElementById('hostA').value="";
+        if(document.getElementById('usrA')) document.getElementById('usrA').value=""; 
+        if(document.getElementById('emailA')) document.getElementById('emailA').value=""; 
+        if(document.getElementById('areaA')) document.getElementById('areaA').value=""; 
+        if(document.getElementById('ccA')) document.getElementById('ccA').value=""; 
+        if(document.getElementById('canalA')) document.getElementById('canalA').value=""; 
+        document.getElementById('notesA').value=""; document.getElementById('urlA').value="";
+        if(!pins.Op) document.getElementById('operador').value=""; aplicarReglaTipo(); checkVacante(); }
+    function reimprimir(id) { let item = bodegas[bIdx].inv.find(e => e.id === id); if(item) imprimirQR(item); }
+    function imprimirQR(eq) { document.getElementById('lId').innerText=eq.id; document.getElementById('lSn').innerText=eq.sn||'N/A'; document.getElementById('lMod').innerText=eq.model||'N/A'; document.getElementById('lBr').innerText=eq.brand||'N/A'; document.getElementById('lHost').innerText=eq.host||'N/A'; document.getElementById('lTi').innerText=eq.tip; document.getElementById('lSt').innerText=eq.st; document.getElementById('lCi').innerText=eq.ci; document.getElementById('lProv').innerText=eq.prov||'N/A'; document.getElementById('lFa').innerText=eq.fa||'N/A'; document.getElementById('lOc').innerText=eq.oc||'N/A'; document.getElementById('lFIng').innerText=eq.fIng||'N/A'; document.getElementById('lFComp').innerText=eq.fComp||'N/A'; let rName = eq.r === -1 ? "RECEPCION" : bodegas[bIdx].racks[eq.r].name; document.getElementById('lLoc').innerText=`${rName}-N${eq.n} (${bodegas[bIdx].nombre})`; let fullData = `ID:${eq.id}\nSN:${eq.sn||''}\nMARCA:${eq.brand||''}\nMOD:${eq.model||''}\nHOST:${eq.host||''}\nTIPO:${eq.tip}\nST:${eq.st}\nCIA:${eq.ci}\nPROV:${eq.prov||''}\nFACT:${eq.fa||''}\nF.ING:${eq.fIng||''}\nF.COMP:${eq.fComp||''}\nUBIC:${bodegas[bIdx].nombre}>${rName}-N${eq.n}`; let box = document.getElementById("qrPlace"); box.innerHTML = ""; new QRCode(box, {text: fullData, width: 130, height: 130, correctLevel : QRCode.CorrectLevel.H}); setTimeout(()=>{let w=window.open('','','width=380,height=650');w.document.write('<html><head><title>Etiqueta</title></head><body style="display:flex;justify-content:center;align-items:center;height:100vh;margin:0;background:#f0f2f5;">'+document.getElementById('printArea').innerHTML+'</body></html>');w.document.close();w.focus();setTimeout(()=>{w.print();w.close()},500);},300); }
+    function renderAll() { document.getElementById('tabsContainer').innerHTML=bodegas.map((b,i)=>`<button class="warehouse-tab ${i===bIdx?'active':''}" onclick="bIdx=${i};renderAll()">${b.nombre}</button>`).join(''); fillSelects(); renderMap(); renderTable(); }
+</script>
+</body>
+</html>
