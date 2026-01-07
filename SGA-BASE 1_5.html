@@ -689,6 +689,7 @@
                 <button id="btnTabStk" class="tab-btn active" onclick="switchTab('stk')">Stock</button>
                 <button id="btnTabLog" class="tab-btn" onclick="switchTab('log')">Auditoría</button>
                 <button id="btnTabDocs" class="tab-btn" onclick="switchTab('docs')">Documentos</button>
+                <button id="btnTabSal" class="tab-btn" onclick="switchTab('sal')">Salidas</button>
             </div>
             <div style="padding:15px; border-bottom:1px solid #eee;"><div class="input-row" style="margin-bottom:0;"><i class="fas fa-filter"></i><input type="text" id="tableFilter" placeholder="Filtrar..." oninput="renderTable()"></div></div>
             <div style="flex:1; overflow-y:auto; padding:10px; overflow-x:auto;"><table style="width:100%; border-collapse:collapse; font-size:11px; min-width:700px;"><thead style="background:#f8fafc; text-align:left;" id="tableHead"></thead><tbody id="tbBody"></tbody></table></div>
@@ -760,14 +761,13 @@
         }
     }
 
-    function init() { 
+    function init() { try { 
         loadDB(); // Carga Inicial
         document.getElementById('fIng').valueAsDate = new Date(); 
         fillSelects(); 
-        checkVacante(); 
-    }
+        checkVacante(); } catch(e) { alert("Init Error: " + e.message); console.error(e); } }
 
-    function login() { if(document.getElementById('passIn').value==="123"){ document.getElementById('loginOverlay').style.display='none'; document.getElementById('mainApp').style.display='grid'; document.getElementById('topNav').style.display='flex'; renderAll(); } }
+    function login() { try { if(document.getElementById('passIn').value==="123"){ document.getElementById('loginOverlay').style.display='none'; document.getElementById('mainApp').style.display='grid'; document.getElementById('topNav').style.display='flex'; renderAll(); } } catch(e) { alert("Login Error: " + e.message); console.error(e); } }
 
     function toggleLeft() { isLeftOpen = !isLeftOpen; updateGrid(); document.getElementById('iconLeft').className = isLeftOpen ? "fas fa-chevron-left" : "fas fa-chevron-right"; }
     function toggleRight() { isRightOpen = !isRightOpen; updateGrid(); document.getElementById('iconRight').className = isRightOpen ? "fas fa-chevron-right" : "fas fa-chevron-left"; }
@@ -1135,11 +1135,11 @@
     }
 
     // ... Funciones
-    function nuevaBodega() { let n = prompt("Nombre:"); if(n) { bodegas.push({nombre:n, racks:[{name:"R1", levels:4, levelNames:{}, capacities:{}}], inv:[]}); bIdx=bodegas.length-1; saveDB(); renderAll(); } }
-    function renombrarBodega() { let n = prompt("Nombre:", bodegas[bIdx].nombre); if(n) { bodegas[bIdx].nombre=n; saveDB(); renderAll(); } }
+    function nuevaBodega() { let n = prompt("Nombre:"); if(n) { bodegas.push({nombre:n, racks:[{name:"R1", levels:4, levelNames:{}, capacities:{}}], inv:[]}); bIdx=bodegas.length-1; saveDB(); renderAll(); } } catch(e) { alert("Login Error: " + e.message); console.error(e); } }
+    function renombrarBodega() { let n = prompt("Nombre:", bodegas[bIdx].nombre); if(n) { bodegas[bIdx].nombre=n; saveDB(); renderAll(); } } catch(e) { alert("Login Error: " + e.message); console.error(e); } }
     function addRack() { let n="R"+(bodegas[bIdx].racks.length+1); bodegas[bIdx].racks.push({name:n, levels:4, levelNames:{}, capacities:{}}); saveDB(); renderAll(); }
-    function borrarRack(rIdx) { if(bodegas[bIdx].inv.some(e=>e.r===rIdx)) return alert("Rack no vacío"); if(confirm("¿Eliminar?")) { bodegas[bIdx].racks.splice(rIdx,1); bodegas[bIdx].inv.forEach(e=>{if(e.r>rIdx)e.r--}); saveDB(); renderAll(); } }
-    function editRackName(rIdx) { let n=prompt("Nombre:", bodegas[bIdx].racks[rIdx].name); if(n) { bodegas[bIdx].racks[rIdx].name=n; saveDB(); renderAll(); } }
+    function borrarRack(rIdx) { if(bodegas[bIdx].inv.some(e=>e.r===rIdx)) return alert("Rack no vacío"); if(confirm("¿Eliminar?")) { bodegas[bIdx].racks.splice(rIdx,1); bodegas[bIdx].inv.forEach(e=>{if(e.r>rIdx)e.r--}); saveDB(); renderAll(); } } catch(e) { alert("Login Error: " + e.message); console.error(e); } }
+    function editRackName(rIdx) { let n=prompt("Nombre:", bodegas[bIdx].racks[rIdx].name); if(n) { bodegas[bIdx].racks[rIdx].name=n; saveDB(); renderAll(); } } catch(e) { alert("Login Error: " + e.message); console.error(e); } }
     function modLev(rIdx, v) { bodegas[bIdx].racks[rIdx].levels = Math.max(1, bodegas[bIdx].racks[rIdx].levels+v); saveDB(); renderAll(); }
     function configNivel(rIdx, lIdx) {
         let rack = bodegas[bIdx].racks[rIdx]; if(!rack.levelNames) rack.levelNames={}; if(!rack.capacities) rack.capacities={};
@@ -1681,7 +1681,14 @@
         } else if (currentTab==='log') { 
             document.getElementById('tableHead').innerHTML="<tr><th style='padding:8px'>Hora</th><th>Operador</th><th>Acción</th><th>ID</th><th>Detalle Equipo</th><th>Ubicación</th></tr>"; 
             auditLog.filter(l=>l.id.toLowerCase().includes(f)||l.op.toLowerCase().includes(f)).forEach(l=>{b.innerHTML+=`<tr><td style='padding:5px'>${l.fecha.split(',')[1]}</td><td>${l.op}</td><td><b>${l.ev}</b></td><td>${l.id}</td><td>${l.info}</td><td>${l.loc}</td></tr>`}) 
-        } else if (currentTab === 'docs') {
+        
+        } else if (currentTab === 'sal') {
+            document.getElementById('tableHead').innerHTML="<tr><th>Fecha</th><th>Tipo</th><th>ID</th><th>Ticket</th><th>Doc</th></tr>";
+            let b=document.getElementById('tbBody');
+            salidasLog.forEach(i=>{
+                b.innerHTML+=`<tr><td>${i.salidaData.fecha}</td><td>${i.salidaData.tipo}</td><td><b>${i.id}</b></td><td>${i.salidaData.ticket}</td><td>${i.salidaData.doc}</td></tr>`;
+            });
+} else if (currentTab === 'docs') {
             document.getElementById('tableHead').innerHTML = "<tr><th>Tipo</th><th>Referencia</th><th>Relacionados</th><th>Acciones</th></tr>";
             let docRows = "";
             for(let key in globalDocs.facturas) {
@@ -1707,7 +1714,7 @@
         downloadCSV(csv, `Rpt_${type}.csv`);
     }
     
-    function switchTab(t) { currentTab=t; document.getElementById('btnTabStk').classList.toggle('active', t==='stk'); document.getElementById('btnTabLog').classList.toggle('active', t==='log'); document.getElementById('btnTabDocs').classList.toggle('active', t==='docs'); renderTable(); }
+    function switchTab(t) { currentTab=t; document.getElementById('btnTabStk').classList.toggle('active', t==='stk'); document.getElementById('btnTabLog').classList.toggle('active', t==='log'); document.getElementById('btnTabDocs').classList.toggle('active', t==='docs'); renderTable(); } catch(e) { alert("RenderAll Error: " + e.message); console.error(e); } }
     function togglePin(f) { pins[f] = !pins[f]; document.getElementById(`pin${f}`).classList.toggle('active'); }
     function fillSelects() { let d = document.getElementById('destRack'); let currentDest = d.value; let rackOpts = `<option value="auto">Automático (Inteligente)</option>`; bodegas[bIdx].racks.forEach((r, i) => { rackOpts += `<option value="${i}">${r.name}</option>`; }); d.innerHTML = rackOpts; if(currentDest && currentDest !== 'auto' && parseInt(currentDest) < bodegas[bIdx].racks.length) d.value = currentDest; for(let id in opciones) { let s=document.getElementById(id); let p=s.value; s.innerHTML=opciones[id].map(o=>`<option value="${o}">${o}</option>`).join(''); if(p)s.value=p; } }
     function limpiarCampos() { if(!pins.Fa)document.getElementById('faA').value=""; if(!pins.Oc)document.getElementById('ocA').value=""; if(!pins.FComp)document.getElementById('fComp').value=""; if(!pins.FIng)document.getElementById('fIng').valueAsDate=new Date(); if(!pins.Dest)document.getElementById('destRack').value="auto"; document.getElementById('idA').value=""; document.getElementById('snA').value=""; 
@@ -1722,10 +1729,9 @@
         if(!pins.Op) document.getElementById('operador').value=""; aplicarReglaTipo(); checkVacante(); }
     function reimprimir(id) { let item = bodegas[bIdx].inv.find(e => e.id === id); if(item) imprimirQR(item); }
     function imprimirQR(eq) { document.getElementById('lId').innerText=eq.id; document.getElementById('lSn').innerText=eq.sn||'N/A'; document.getElementById('lMod').innerText=eq.model||'N/A'; document.getElementById('lBr').innerText=eq.brand||'N/A'; document.getElementById('lHost').innerText=eq.host||'N/A'; document.getElementById('lTi').innerText=eq.tip; document.getElementById('lSt').innerText=eq.st; document.getElementById('lCi').innerText=eq.ci; document.getElementById('lProv').innerText=eq.prov||'N/A'; document.getElementById('lFa').innerText=eq.fa||'N/A'; document.getElementById('lOc').innerText=eq.oc||'N/A'; document.getElementById('lFIng').innerText=eq.fIng||'N/A'; document.getElementById('lFComp').innerText=eq.fComp||'N/A'; let rName = eq.r === -1 ? "RECEPCION" : bodegas[bIdx].racks[eq.r].name; document.getElementById('lLoc').innerText=`${rName}-N${eq.n} (${bodegas[bIdx].nombre})`; let fullData = `ID:${eq.id}\nSN:${eq.sn||''}\nMARCA:${eq.brand||''}\nMOD:${eq.model||''}\nHOST:${eq.host||''}\nTIPO:${eq.tip}\nST:${eq.st}\nCIA:${eq.ci}\nPROV:${eq.prov||''}\nFACT:${eq.fa||''}\nF.ING:${eq.fIng||''}\nF.COMP:${eq.fComp||''}\nUBIC:${bodegas[bIdx].nombre}>${rName}-N${eq.n}`; let box = document.getElementById("qrPlace"); box.innerHTML = ""; new QRCode(box, {text: fullData, width: 130, height: 130, correctLevel : QRCode.CorrectLevel.H}); setTimeout(()=>{let w=window.open('','','width=380,height=650');w.document.write('<html><head><title>Etiqueta</title></head><body style="display:flex;justify-content:center;align-items:center;height:100vh;margin:0;background:#f0f2f5;">'+document.getElementById('printArea').innerHTML+'</body></html>');w.document.close();w.focus();setTimeout(()=>{w.print();w.close()},500);},300); }
-    function renderAll() { document.getElementById('tabsContainer').innerHTML=bodegas.map((b,i)=>`<button class="warehouse-tab ${i===bIdx?'active':''}" onclick="bIdx=${i};renderAll()">${b.nombre}</button>`).join(''); fillSelects(); renderMap(); renderTable(); }
-</script>
+    function renderAll() { try { document.getElementById('tabsContainer').innerHTML=bodegas.map((b,i)=>`<button class="warehouse-tab ${i===bIdx?'active':''}" onclick="bIdx=${i};renderAll()">${b.nombre}</button>`).join(''); fillSelects(); renderMap(); renderTable(); } catch(e) { alert("RenderAll Error: " + e.message); console.error(e); } }
 
-    <script>
+
 // --- NEW OUTPUT MODULE LOGIC (v12.38) ---
     let savedSignatures = { names: [], jobs: [], roles: [] };
     let savedLogos = { planta: null, tienda: null }; 
