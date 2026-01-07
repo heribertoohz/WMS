@@ -6,6 +6,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
     <style>
         * { box-sizing: border-box; }
         :root { --primary: #0f172a; --accent: #3b82f6; --success: #10b981; --danger: #ef4444; --warning: #f59e0b; --bg: #f8fafc; --card: #ffffff; --verified: #059669; --pdf: #dc2626; --doc: #8b5cf6; --output: #475569; }
@@ -205,11 +206,75 @@
         /* RACK SUMMARY BADGE */
         .rack-summary-container { display:flex; gap:10px; margin-bottom:15px; padding-bottom:15px; border-bottom:1px dashed #e2e8f0; overflow-x:auto; }
         .level-summary-badge { padding: 5px 10px; border-radius: 6px; font-size: 11px; font-weight: bold; text-align: center; min-width: 60px; color: #fff; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+
+        /* MODULO SALIDAS */
+        .output-type-selector { display: flex; gap: 10px; margin-bottom: 15px; overflow-x: auto; padding-bottom: 5px; }
+        .type-btn { flex: 1; min-width: 100px; padding: 10px; border: 1px solid #cbd5e1; border-radius: 6px; background: #f8fafc; cursor: pointer; font-weight: bold; font-size: 11px; text-align: center; white-space: nowrap; transition:0.2s;}
+        .type-btn.active { background: var(--primary); color: white; border-color: var(--primary); transform:scale(1.05); box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); }
+        .type-btn.danger { border-color: #ef4444; color: #ef4444; }
+        .type-btn.danger.active { background: #ef4444; color: white; }
+        
+        .form-section { display: none; border-top: 1px solid #e2e8f0; padding-top: 15px; }
+        .form-section.active { display: block; }
+        .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        .full-width { grid-column: span 2; }
+        .step-box { background: #f8fafc; border: 1px solid #e2e8f0; padding: 15px; border-radius: 8px; margin-bottom: 15px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+        .step-title { font-size: 11px; font-weight: 800; color: var(--primary); margin-bottom: 10px; text-transform: uppercase; border-bottom: 2px solid #e2e8f0; padding-bottom: 5px; display:block; width:100%;}
+        
+        .sign-row { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 5px; margin-bottom: 5px; }
+        .btn-save-sign { background: #64748b; color: white; border: none; padding: 5px 10px; border-radius: 4px; font-size: 10px; cursor: pointer; float: right; }
+
+        /* GRID DE BOTONES */
+        .tools-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px; }
+        .btn-action-lg { width: 100%; padding: 12px; border-radius: 6px; border: none; font-weight: bold; cursor: pointer; text-transform: uppercase; font-size: 12px; display: flex; align-items: center; justify-content: center; gap: 8px; transition: 0.2s; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .btn-action-lg:hover { opacity: 0.9; transform: translateY(-1px); }
+        .btn-pdf { background: var(--pdf); color: white; }
+        .btn-qr { background: #ea580c; color: white; } 
+        .btn-labels { background: var(--dark-btn); color: white; }
+        .input-group-joined { display: flex; border-radius: 6px; overflow: hidden; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .input-group-joined input, .input-group-joined select { border: 1px solid #cbd5e1; border-right: none; padding: 0 10px; outline: none; }
+        .input-group-joined input { width: 60px; text-align: center; font-weight: bold; }
+        .input-group-joined select { flex: 1; }
+        .input-group-joined button { border: none; background: #b91c1c; color: white; font-weight: bold; cursor: pointer; font-size: 11px; padding: 10px; white-space: nowrap; }
+        .input-group-joined button:hover { background: #991b1b; }
+
+        .upload-section-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 5px; }
+        .upload-card { border: 1px dashed #cbd5e1; background: white; padding: 10px; border-radius: 6px; text-align: center; }
+        .upload-card label { display: block; font-size: 10px; font-weight: bold; color: #64748b; margin-bottom: 5px; }
+        .upload-card input { font-size: 10px; width: 100%; }
+
+        /* LISTA COLA */
+        .queue-list-container { max-height: 200px; overflow-y: auto; border: 1px solid #eee; margin-bottom: 15px; border-radius: 6px; }
+        .mini-table { width: 100%; border-collapse: collapse; font-size: 10px; }
+        .mini-table th { background: #0284c7; color: white; padding: 6px; text-align: left; position: sticky; top: 0; font-weight:bold; }
+        .mini-table td { border-bottom: 1px solid #eee; padding: 5px; }
+        .mini-table tr:nth-child(even) { background-color: #f8fafc; }
+        .btn-remove-item { color: #ef4444; cursor: pointer; font-size: 12px; }
+
+        /* DOCS EXCLUSIVOS */
+        .doc-section { display: none; }
+        .doc-section.active { display: block; animation: slideDown 0.3s ease-out; }
+        @keyframes slideDown { from { opacity: 0; transform: translateY(-5px); } to { opacity: 1; transform: translateY(0); } }
+
+        .evidence-grid { display: flex; gap: 5px; flex-wrap: wrap; justify-content: center; margin-top: 5px; }
+        .evidence-thumb { position: relative; width: 50px; height: 50px; border-radius: 4px; overflow: hidden; border: 1px solid #ddd; }
+        .evidence-thumb img { width: 100%; height: 100%; object-fit: cover; }
+        .btn-del-img { position: absolute; top: 0; right: 0; background: rgba(255,0,0,0.8); color: white; width: 14px; height: 14px; line-height: 14px; font-size: 8px; cursor: pointer; }
+
+        .logo-preview-container { text-align:center; padding:10px; border:1px dashed #ccc; margin-top:5px; border-radius:6px; background:#fff; }
+        .logo-img { max-width: 120px; max-height: 60px; display:none; margin: 0 auto; }
+        .config-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+        
+        .level-table { width: 100%; border-collapse: collapse; font-size: 11px; }
+        .level-table th, .level-table td { padding: 6px; text-align: left; border-bottom: 1px solid #eee; }
+        .level-table th { background: #f8fafc; color: #64748b; }
+        .chk-select { cursor: pointer; }
+
     </style>
 </head>
 <body onload="init()">
 
-    <div class="version-tag">v12.13 + Persistencia + Salidas</div>
+    <div class="version-tag">v12.39 - Salidas Modulo Independiente</div>
 
     <div id="loginOverlay">
         <div style="background:white; padding:40px; border-radius:15px; width:300px; text-align:center;">
@@ -271,41 +336,240 @@
         </div>
     </div>
 
-    <div id="outputModal">
-        <div class="modal-card small">
-            <div class="modal-header"><h3 style="margin:0; color:var(--output);"><i class="fas fa-sign-out-alt"></i> Confirmar Salida / Baja</h3><i class="fas fa-times modal-close" onclick="closeOutputModal()"></i></div>
+    
+    <div id="companyModal">
+        <div class="modal-card small" style="max-width: 400px;">
+            <div class="modal-header">
+                <h3 style="margin:0;"><i class="fas fa-building"></i> Nueva Empresa</h3>
+                <i class="fas fa-times modal-close" onclick="document.getElementById('companyModal').style.display='none'" style="cursor:pointer"></i>
+            </div>
             <div class="modal-body">
-                <div style="padding:10px;">
-                    <p style="font-size:11px; color:#ef4444; margin-bottom:15px;">⚠️ <b>Atención:</b> Los equipos saldrán del inventario de forma definitiva.</p>
-                    
-                    <label style="font-size:12px; font-weight:bold; color:#475569;">Tipo de Movimiento:</label>
-                    <select id="outputType" style="width:100%; padding:8px; margin-top:5px; margin-bottom:10px; border-radius:6px; border:1px solid #cbd5e1;">
-                        <option value="VENTA">Venta</option>
-                        <option value="ASIGNACION">Asignación Empleado</option>
-                        <option value="DEVOLUCION">Devolución Proveedor</option>
-                        <option value="MERMA">Baja por Merma/Daño</option>
-                        <option value="OTRO">Otro</option>
-                    </select>
-                    
-                    <label style="font-size:12px; font-weight:bold; color:#475569;">Documento Respaldo:</label>
-                    <input type="text" id="outputDoc" placeholder="Ej: Ticket #1234, Acta #99..." style="width:100%; padding:8px; margin-top:5px; margin-bottom:10px; border-radius:6px; border:1px solid #cbd5e1;">
+                <div class="input-row"><i class="fas fa-font"></i><input type="text" id="newCompanyName" placeholder="Nombre Empresa (Ej: AVANTE GDL)"></div>
+                <div class="step-box" style="margin-top:10px;">
+                    <div class="step-title">Logo</div>
+                    <input type="file" id="newCompanyLogo" accept="image/*" onchange="previewNewCompanyLogo()">
+                    <div class="logo-preview-container"><img id="newCompanyPreview" class="logo-img"></div>
+                </div>
+                <button onclick="saveNewCompany()" style="width:100%; margin-top:10px; padding:10px; background:var(--success); color:white; border:none; border-radius:6px; cursor:pointer; font-weight:bold;">Guardar Empresa</button>
+            </div>
+        </div>
+    </div>
 
-                    <label style="font-size:12px; font-weight:bold; color:#475569;">Observaciones:</label>
-                    <input type="text" id="outputObs" placeholder="Detalles adicionales..." style="width:100%; padding:8px; margin-top:5px; margin-bottom:15px; border-radius:6px; border:1px solid #cbd5e1;">
-
-                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:5px;">
-                        <span style="font-size:12px; font-weight:bold;">Equipos a Procesar:</span>
-                        <button onclick="clearOutputQueue()" style="border:none; background:none; color:var(--danger); font-size:11px; cursor:pointer;">Limpiar todo</button>
-                    </div>
-                    <div id="outputQueueList" class="transfer-queue-grid"></div>
-                    
-                    <button onclick="executeOutput()" style="width:100%; margin-top:20px; padding:12px; background:var(--output); color:white; border:none; border-radius:8px; font-weight:bold; cursor:pointer;"><i class="fas fa-check"></i> CONFIRMAR SALIDA</button>
+    <div id="searchSelectionModal">
+        <div class="modal-card small">
+            <div class="modal-header">
+                <h3 style="margin:0;"><i class="fas fa-search"></i> Buscar y Agregar Equipos</h3>
+                <i class="fas fa-times modal-close" onclick="document.getElementById('searchSelectionModal').style.display='none'" style="cursor:pointer"></i>
+            </div>
+            <div class="modal-body">
+                <div class="input-row">
+                    <i class="fas fa-filter"></i>
+                    <input type="text" id="searchSelectInput" placeholder="Filtrar por Serie, Modelo, ID..." onkeyup="renderSearchSelectionTable()">
+                </div>
+                <div style="max-height: 400px; overflow-y: auto; border: 1px solid #eee; border-radius: 6px;">
+                    <table class="level-table">
+                        <thead>
+                            <tr>
+                                <th width="30"><input type="checkbox" onclick="toggleAllSearch(this)"></th>
+                                <th>ID</th>
+                                <th>Serie</th>
+                                <th>Marca</th>
+                                <th>Modelo</th>
+                                <th>Tipo</th>
+                                <th>Ubicación</th>
+                            </tr>
+                        </thead>
+                        <tbody id="searchSelectionBody"></tbody>
+                    </table>
+                </div>
+                <div style="margin-top:15px; text-align:right;">
+                    <span id="searchCount" style="font-size:11px; color:#64748b; margin-right:10px;">0 seleccionados</span>
+                    <button onclick="addFromSearchSelection()" style="background:var(--accent); color:white; border:none; padding:10px 20px; border-radius:6px; font-weight:bold; cursor:pointer;"><i class="fas fa-plus-circle"></i> Agregar a Cola</button>
                 </div>
             </div>
         </div>
     </div>
 
-    <div id="detailModal">
+    <div id="configModal">
+        <div class="modal-card small" style="max-width: 550px;">
+            <div class="modal-header"><h3 style="margin:0;"><i class="fas fa-images"></i> Configuración Logos</h3><i class="fas fa-times modal-close" onclick="document.getElementById('configModal').style.display='none'" style="cursor:pointer"></i></div>
+            <div class="modal-body">
+                <div class="config-grid">
+                    <div class="step-box">
+                        <div class="step-title">Logo Planta (DTA)</div>
+                        <input type="file" id="logoInputPlanta" accept="image/*" onchange="previewLogo('planta')" style="font-size:10px; width:100%;">
+                        <div class="logo-preview-container"><img id="previewPlanta" class="logo-img"><span id="txtPlanta" style="font-size:10px;color:#ccc;">Vacío</span></div>
+                        <button onclick="saveLogo('planta')" style="width:100%;margin-top:5px;padding:5px;background:var(--success);color:white;border:none;">Guardar</button>
+                    </div>
+                    <div class="step-box">
+                        <div class="step-title">Logo Tienda (ALKA)</div>
+                        <input type="file" id="logoInputTienda" accept="image/*" onchange="previewLogo('tienda')" style="font-size:10px; width:100%;">
+                        <div class="logo-preview-container"><img id="previewTienda" class="logo-img"><span id="txtTienda" style="font-size:10px;color:#ccc;">Vacío</span></div>
+                        <button onclick="saveLogo('tienda')" style="width:100%;margin-top:5px;padding:5px;background:var(--success);color:white;border:none;">Guardar</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="outputModal">
+        <div class="modal-card small" style="max-width: 900px;">
+            <div class="modal-header">
+                <h3 style="margin:0; color:var(--output);"><i class="fas fa-sign-out-alt"></i> Gestión de Salidas <span id="sessionFolioDisplay" style="font-size:12px; color:#64748b; margin-left:10px;"></span></h3>
+                <i class="fas fa-times modal-close" onclick="closeOutputModal()" style="cursor:pointer"></i>
+            </div>
+            <div class="modal-body">
+                <div class="output-type-selector">
+                    <div class="type-btn active" onclick="setOutputType('asignacion')">Asignación</div>
+                    <div class="type-btn" onclick="setOutputType('planta')">Planta</div>
+                    <div class="type-btn" onclick="setOutputType('tienda')">Tienda</div>
+                    <div class="type-btn danger" onclick="setOutputType('destruccion')">Destrucción</div>
+                    <div class="type-btn" style="border-color:#8b5cf6; color:#8b5cf6;" onclick="setOutputType('laboratorio')">Laboratorio</div>
+                </div>
+
+                <div class="step-box">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:5px;">
+                        <div class="step-title" style="margin:0;">Equipos Seleccionados</div>
+                        <button onclick="openSearchSelection()" style="background:var(--primary); color:white; border:none; padding:6px 12px; border-radius:4px; font-size:11px; cursor:pointer; display:flex; align-items:center; gap:5px;"><i class="fas fa-search"></i> Buscar y Agregar</button>
+                    </div>
+                    
+                    <div id="queueListContainer" class="queue-list-container"></div>
+                </div>
+
+                <div class="step-box">
+                    <div class="step-title">1. Datos Generales</div>
+                    <div class="form-grid">
+                        <div class="input-row" id="rowTicket"><i class="fas fa-ticket-alt"></i><input type="text" id="outTicket" placeholder="No. Ticket *"></div>
+                        <div class="input-row"><i class="fas fa-user-tag"></i><input type="text" id="outOperador" placeholder="Operador *" readonly></div>
+                    </div>
+                </div>
+
+                <div id="formStandard" class="form-section active">
+                    <div class="step-box">
+                        <div class="step-title">2. Datos Específicos</div>
+                        <div class="form-grid">
+                            <div class="input-row"><i class="fas fa-id-badge"></i><input type="text" id="outNumEmp" placeholder="No. Empleado"></div>
+                            <div class="input-row"><i class="fas fa-user"></i><input type="text" id="outNombre" placeholder="Usuario/Destinatario"></div>
+                            <div class="input-row"><i class="fas fa-envelope"></i><input type="text" id="outCorreo" placeholder="Correo"></div>
+                            <div class="input-row"><i class="fas fa-map-marked"></i><input type="text" id="outArea" placeholder="Área"></div>
+                            <div class="input-row"><i class="fas fa-coins"></i><input type="text" id="outCeco" placeholder="CeCo"></div>
+                            <div class="input-row"><i class="fas fa-project-diagram"></i><input type="text" id="outCanal" placeholder="Canal"></div>
+                            <div class="input-row full-width" id="rowPlanta" style="display:none;"><i class="fas fa-industry"></i><input type="text" id="outPlantaNombre" placeholder="Nombre Planta *"></div>
+                            <div class="input-row full-width" id="rowTienda" style="display:none;"><i class="fas fa-store"></i><input type="text" id="outTiendaNombre" placeholder="Nombre Tienda *"></div>
+                            <div class="input-row full-width" id="rowObs"><i class="fas fa-comment"></i><input type="text" id="outObs" placeholder="Motivo / Observaciones *"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="formDestruccion" class="form-section">
+                    <div class="step-box" style="background:#fef2f2; border-color:#fecaca;">
+                        <div class="step-title" style="color:#b91c1c;">2. Datos de Destrucción</div>
+                        <div class="form-grid">
+                            <div class="input-row full-width">
+                                <div class="input-group-joined" style="width:100%;">
+                                    <select id="destCompanySelect" style="flex:1; border:1px solid #cbd5e1; padding:8px; border-radius:6px 0 0 6px; outline:none; background:#fff;"></select>
+                                    <button onclick="document.getElementById('companyModal').style.display='flex'" style="width:40px; background:#64748b; border-radius:0 6px 6px 0;" title="Agregar Empresa"><i class="fas fa-plus"></i></button>
+                                </div>
+                            </div>
+                            <div class="input-row full-width"><i class="fas fa-comment"></i><input type="text" id="destMotivo" placeholder="Detalle del Daño (General)"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="formLaboratorio" class="form-section">
+                    <div class="step-box" style="background:#f5f3ff; border-color:#ddd6fe;">
+                        <div class="step-title" style="color:#6d28d9;">3. Datos Técnicos Laboratorio</div>
+                        <div class="form-grid">
+                            
+                            <div class="input-row full-width">
+                                <div class="input-group-joined" style="width:100%;">
+                                    <select id="labSelect" style="flex:1; border:1px solid #cbd5e1; padding:8px; border-radius:6px 0 0 6px; outline:none; background:#fff;"></select>
+                                    <button onclick="addNewLab()" style="width:40px; background:#6d28d9; border-radius:0 6px 6px 0;" title="Agregar Lab"><i class="fas fa-plus"></i></button>
+                                </div>
+                            </div>
+
+                            <div class="input-row full-width">
+                                <button onclick="generarDocumentos()" class="btn-action-lg" style="background:#8b5cf6; color:white; width:100%;"><i class="fas fa-tag"></i> GENERAR ETIQUETA</button>
+                            </div>
+
+                            <div class="input-row full-width"><i class="fas fa-user-md"></i><input type="text" id="labIngeniero" list="listIngenieros" placeholder="Ingeniero Asignado *"><datalist id="listIngenieros"></datalist><i class="fas fa-save" onclick="saveEngineer()" style="cursor:pointer; color:var(--success); margin-left:5px;" title="Guardar Ing"></i></div>
+                            <div class="input-row full-width"><i class="fas fa-vial"></i><input type="text" id="labMotivo" placeholder="Falla / Motivo Diagnóstico *"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="approversSection" class="step-box" style="display:none;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                        <div class="step-title" style="margin:0; border:none;">3. Aprobadores</div>
+                        <button class="btn-save-sign" onclick="saveSignatureConfig()"><i class="fas fa-save"></i> Guardar Favoritos</button>
+                    </div>
+                    <div id="signRowsContainer"></div>
+                </div>
+
+                <div class="step-box" style="margin-top:10px; background:#fff; border-color:#cbd5e1;">
+                    <div class="step-title" style="color:#334155;">4. Documentación & Validación</div>
+                    
+                    <div id="docAsignacion" class="doc-section active">
+                        <button onclick="generarDocumentos()" class="btn-action-lg btn-pdf"><i class="fas fa-file-contract"></i> GENERAR CARTA RESPONSIVA</button>
+                        <div class="upload-card" style="margin-top:10px;">
+                            <label>Subir Carta Firmada *</label>
+                            <input type="file" id="fileRespAsig" accept="application/pdf,image/*">
+                        </div>
+                    </div>
+
+                    <div id="docPlantaTienda" class="doc-section">
+                        <div class="tools-grid">
+                            <button onclick="generarDocumentos()" class="btn-action-lg btn-pdf"><i class="fas fa-file-pdf"></i> PDF SALIDA</button>
+                            <button onclick="generarQRLabel()" class="btn-action-lg btn-qr"><i class="fas fa-print"></i> ETIQUETA CAJA</button>
+                        </div>
+                        <div class="upload-card">
+                            <label>Subir Salida Firmada / Guía *</label>
+                            <input type="file" id="fileRespPlantaTienda" accept="application/pdf,image/*">
+                        </div>
+                    </div>
+
+                    <div id="docDestruccion" class="doc-section">
+                        <button onclick="generarDocumentos()" class="btn-action-lg btn-pdf" style="background:#dc2626; margin-bottom:10px;"><i class="fas fa-file-pdf"></i> GENERAR ACTA DE BAJA</button>
+                        <div class="tools-grid">
+                            <div class="input-group-joined">
+                                <input type="number" id="destContainerCount" placeholder="#" min="1" value="1" title="Cantidad Contenedores">
+                                <button onclick="generarEtiquetasContenedores()" style="background:#b91c1c;"><i class="fas fa-box"></i> ETIQUETAS CONTENEDORES</button>
+                            </div>
+                            <button onclick="generarEtiquetasEquipos()" class="btn-action-lg btn-labels"><i class="fas fa-tags"></i> ETIQUETAS INDIVIDUALES</button>
+                        </div>
+                        <div class="upload-section-grid">
+                            <div class="upload-card">
+                                <label>Subir Acta Firmada *</label>
+                                <input type="file" id="fileRespDest" accept="application/pdf,image/*">
+                            </div>
+                            <div class="upload-card" style="background:#fff7ed; border-color:#fdba74;">
+                                <label style="color:#c2410c;">📸 Evidencia (Daño/Cajas) *</label>
+                                <input type="file" id="fileEvidence" accept="image/*" multiple onchange="handleEvidenceSelection()">
+                                <div id="evidencePreviewContainer" class="evidence-grid"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="docLaboratorio" class="doc-section">
+                        <div class="upload-card" style="background:#f0fdf4; border-color:#86efac;">
+                            <label style="color:#15803d; font-size:12px;">ESCÁNER DE VALIDACIÓN DE SALIDA *</label>
+                            <input type="text" id="qrScanInput" placeholder="Click aquí y escanee el QR generado..." style="padding:10px; text-align:center; font-weight:bold; border:2px solid #86efac; border-radius:4px;" onkeyup="checkLabQR()">
+                            <div id="qrMsg" style="text-align:center; font-size:11px; min-height:15px; margin-top:5px; font-weight:bold;"></div>
+                        </div>
+                    </div>
+
+                </div>
+
+                <div style="text-align:right; margin-top:15px;">
+                    <button id="btnConfirmarSalida" onclick="confirmarSalidaCompleta()" style="padding:12px 25px; background:var(--success); color:white; border:none; border-radius:6px; font-weight:bold; cursor:pointer; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);"><i class="fas fa-check-double"></i> CONFIRMAR PROCESO</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div id="qrPrintArea" style="display:none;"></div>
+    <div id="qrContainerHidden" style="display:none;"></div>
+<div id="detailModal">
         <div class="modal-card">
             <div class="modal-header"><div style="display:flex; align-items:center;"><h3 style="margin:0" id="modalTitle">Contenido Nivel</h3><div id="levelActions"></div></div><i class="fas fa-times modal-close" onclick="closeModal()"></i></div>
             <div class="modal-body">
@@ -1219,7 +1483,619 @@
                 </div>
             `;
             let w=window.open('','','width=350,height=400');
-            w.document.write('<html><head><title>Etiqueta Ubicación</title></head><body style="display:flex;justify-content:center;align-items:center;">'+printContent+'</body></html>');
+            w.document.write('<html><head><title>Etiqueta Ubicación</title></head><body style="display:flex;justify-content:center;align-items:center;">'+printContent+'
+    // --- NEW OUTPUT MODULE LOGIC (v12.38) ---
+    let savedSignatures = { names: [], jobs: [], roles: [] };
+    let savedLogos = { planta: null, tienda: null }; 
+    let companyList = [ { name: "AVANTE (DTA)", logo: null }, { name: "AVANTE (ALKA)", logo: null } ];
+    let labList = ["Laboratorio HP", "Lenovo Service", "Soporte Interno"];
+    let savedEngineers = ["Ingeniero 1"];
+    let evidenceFiles = []; 
+    let currentOutputType = 'asignacion'; 
+    let generatedLabQR = ""; 
+    let currentSessionFolio = "";
+    let salidasLog = [];
+
+    // Override LoadDB to include new fields
+    const ORIGINAL_LOAD_DB = loadDB;
+    loadDB = function() {
+        ORIGINAL_LOAD_DB();
+        const data = localStorage.getItem(DB_KEY);
+        if(data) {
+            try {
+                const parsed = JSON.parse(data);
+                salidasLog = parsed.salidasLog || [];
+                savedSignatures = parsed.savedSignatures || { names: [], jobs: [], roles: [] };
+                savedLogos = parsed.savedLogos || { planta: null, tienda: null };
+                savedEngineers = parsed.savedEngineers || ["Ingeniero 1"];
+                companyList = parsed.companyList || [ { name: "AVANTE (DTA)", logo: null }, { name: "AVANTE (ALKA)", logo: null } ];
+                labList = parsed.labList || ["Laboratorio HP", "Lenovo Service", "Soporte Interno"];
+            } catch(e) { console.error("Error loading new fields", e); }
+        }
+        // Init UI
+        if(savedLogos.planta) { try{document.getElementById('previewPlanta').src = savedLogos.planta; document.getElementById('previewPlanta').style.display='inline-block'; document.getElementById('txtPlanta').style.display='none';}catch(e){} }
+        if(savedLogos.tienda) { try{document.getElementById('previewTienda').src = savedLogos.tienda; document.getElementById('previewTienda').style.display='inline-block'; document.getElementById('txtTienda').style.display='none';}catch(e){} }
+        updateEngineerList();
+        renderSignRows();
+        renderCompanySelect();
+        renderLabSelect();
+    };
+
+    // Override SaveDB
+    const ORIGINAL_SAVE_DB = saveDB;
+    saveDB = function() {
+        const data = {
+            bodegas, auditLog, globalDocs, opciones, rules,
+            salidasLog, savedSignatures, savedLogos, savedEngineers, companyList, labList
+        };
+        try {
+            localStorage.setItem(DB_KEY, JSON.stringify(data));
+            console.log("DB Guardada (Extended)");
+        } catch (e) {
+            console.error("Error guardando DB", e);
+        }
+    };
+
+    /* --- EMPRESAS & LABS --- */
+    function renderCompanySelect() {
+        const sel = document.getElementById('destCompanySelect');
+        if(!sel) return;
+        sel.innerHTML = companyList.map((c, i) => `<option value="${i}">${c.name}</option>`).join('');
+    }
+
+    function renderLabSelect() {
+        const sel = document.getElementById('labSelect');
+        if(!sel) return;
+        sel.innerHTML = labList.map(l => `<option value="${l}">${l}</option>`).join('');
+    }
+
+    function addNewLab() {
+        const name = prompt("Nombre del nuevo laboratorio:");
+        if(name) {
+            labList.push(name);
+            saveDB();
+            renderLabSelect();
+            document.getElementById('labSelect').value = name;
+        }
+    }
+
+    /* --- LOGOS --- */
+    function previewNewCompanyLogo() {
+        const file = document.getElementById('newCompanyLogo').files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = (e) => { document.getElementById('newCompanyPreview').src = e.target.result; document.getElementById('newCompanyPreview').style.display='inline-block'; };
+            reader.readAsDataURL(file);
+        }
+    }
+
+    function saveNewCompany() {
+        const name = document.getElementById('newCompanyName').value.trim();
+        const src = document.getElementById('newCompanyPreview').src;
+        if(!name) return alert("Ingrese un nombre.");
+        let logoData = null;
+        if(src && src.startsWith('data:image')) logoData = src;
+        companyList.push({ name: name, logo: logoData });
+        saveDB();
+        renderCompanySelect();
+        alert("Empresa agregada.");
+        document.getElementById('companyModal').style.display='none';
+    }
+
+    /* --- HELPERS --- */
+    function calcAge(dateStr) {
+        if(!dateStr) return "N/D";
+        const d = new Date(dateStr);
+        const now = new Date();
+        const diffTime = Math.abs(now - d);
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)); 
+        if(diffDays > 365) return (diffDays/365).toFixed(1) + " años";
+        return diffDays + " días";
+    }
+
+    /* --- LOGOS & INGENIEROS --- */
+    function previewLogo(type) {
+        const idInput = type === 'planta' ? 'logoInputPlanta' : 'logoInputTienda';
+        const idImg = type === 'planta' ? 'previewPlanta' : 'previewTienda';
+        const idTxt = type === 'planta' ? 'txtPlanta' : 'txtTienda';
+        const file = document.getElementById(idInput).files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                document.getElementById(idImg).src = e.target.result;
+                document.getElementById(idImg).style.display = 'inline-block';
+                document.getElementById(idTxt).style.display = 'none';
+            };
+            reader.readAsDataURL(file);
+        }
+    }
+    
+    function updateEngineerList() {
+        const l = document.getElementById('listIngenieros');
+        if(!l) return;
+        l.innerHTML = savedEngineers.map(e => `<option value="${e}">`).join('');
+    }
+    function saveEngineer() {
+        const v = document.getElementById('labIngeniero').value;
+        if(v && !savedEngineers.includes(v)) { savedEngineers.push(v); saveDB(); updateEngineerList(); alert("Ingeniero guardado."); }
+    }
+
+    /* --- FIRMAS --- */
+    function renderSignRows() {
+        let html = '';
+        for(let i=1; i<=5; i++) {
+            html += `<div class="sign-row">
+                <div class="input-row"><i class="fas fa-user"></i><input type="text" id="signName${i}" placeholder="Nombre ${i}"></div>
+                <div class="input-row"><i class="fas fa-briefcase"></i><input type="text" id="signJob${i}" placeholder="Puesto ${i}"></div>
+                <div class="input-row"><i class="fas fa-tasks"></i><input type="text" id="signRole${i}" placeholder="Rol ${i}"></div>
+            </div>`;
+        }
+        const c = document.getElementById('signRowsContainer');
+        if(c) c.innerHTML = html;
+    }
+    function loadSignaturesToForm() {
+        for(let i=0; i<5; i++) {
+            if(savedSignatures.names[i]) document.getElementById(`signName${i+1}`).value = savedSignatures.names[i];
+            if(savedSignatures.jobs[i]) document.getElementById(`signJob${i+1}`).value = savedSignatures.jobs[i];
+            if(savedSignatures.roles[i]) document.getElementById(`signRole${i+1}`).value = savedSignatures.roles[i];
+        }
+    }
+    function saveSignatureConfig() {
+        let n=[], j=[], r=[];
+        for(let i=1; i<=5; i++) {
+            n.push(document.getElementById(`signName${i}`).value);
+            j.push(document.getElementById(`signJob${i}`).value);
+            r.push(document.getElementById(`signRole${i}`).value);
+        }
+        savedSignatures = { names:n, jobs:j, roles:r };
+        saveDB(); alert("Firmas guardadas.");
+    }
+
+    /* --- EVIDENCIA MULTIPLE --- */
+    function handleEvidenceSelection() {
+        const input = document.getElementById('fileEvidence');
+        const files = Array.from(input.files);
+        files.forEach(file => {
+            const reader = new FileReader();
+            reader.onload = (e) => { evidenceFiles.push(e.target.result); renderEvidencePreviews(); };
+            reader.readAsDataURL(file);
+        });
+        input.value = ""; 
+    }
+    function renderEvidencePreviews() {
+        const c = document.getElementById('evidencePreviewContainer');
+        c.innerHTML = evidenceFiles.map((src, idx) => `<div class="evidence-thumb"><img src="${src}"><div class="btn-del-img" onclick="removeEvidence(${idx})">x</div></div>`).join('');
+    }
+    function removeEvidence(idx) { evidenceFiles.splice(idx, 1); renderEvidencePreviews(); }
+
+    /* --- BUSCADOR Y SELECCION --- */
+    function openSearchSelection() {
+        document.getElementById('searchSelectionModal').style.display='flex';
+        renderSearchSelectionTable();
+    }
+    function renderSearchSelectionTable() {
+        const filter = document.getElementById('searchSelectInput').value.toLowerCase();
+        const tbody = document.getElementById('searchSelectionBody');
+        tbody.innerHTML = "";
+        let filtered = bodegas[bIdx].inv.filter(i => i.id.toLowerCase().includes(filter) || (i.sn && i.sn.toLowerCase().includes(filter)) || (i.model && i.model.toLowerCase().includes(filter)));
+        filtered = filtered.filter(i => !outputQueue.some(q => q.id === i.id));
+        filtered.forEach(i => {
+            const ubic = i.r === -1 ? "Recepción" : `${bodegas[bIdx].racks[i.r].name}-N${i.n}`;
+            tbody.innerHTML += `<tr><td><input type="checkbox" class="chk-search-select" value="${i.id}"></td><td><b>${i.id}</b></td><td>${i.sn||'-'}</td><td>${i.brand||'-'}</td><td>${i.model||'-'}</td><td>${i.tip}</td><td>${ubic}</td></tr>`;
+        });
+        document.getElementById('searchCount').innerText = "Filtrados: " + filtered.length;
+    }
+    function toggleAllSearch(s) { document.querySelectorAll('.chk-search-select').forEach(c => c.checked = s.checked); }
+    function addFromSearchSelection() {
+        document.querySelectorAll('.chk-search-select:checked').forEach(c => {
+            const item = bodegas[bIdx].inv.find(i => i.id === c.value);
+            if(item) outputQueue.push(item);
+        });
+        updateOutputBadge(); renderQueue(); document.getElementById('searchSelectionModal').style.display='none';
+    }
+
+    /* --- GESTION COLA DETALLADA --- */
+    function renderQueue() {
+        const c = document.getElementById('queueListContainer');
+        if(!c) return;
+        if(outputQueue.length===0) { c.innerHTML='<div style="padding:15px;text-align:center;color:#ccc;">Cola vacía. Use "Buscar y Agregar".</div>'; return; }
+        
+        let html = `<table class="mini-table">
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>Empresa</th>
+                    <th>Activo</th>
+                    <th>Equipo</th>
+                    <th>Marca</th>
+                    <th>Modelo</th>
+                    <th>Serie</th>
+                    <th>Antigüedad</th>
+                    <th>Año Adq</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>`;
+        
+        outputQueue.forEach((item, i) => {
+            let age = calcAge(item.fComp);
+            let year = item.fComp ? item.fComp.split('-')[0] : 'N/D';
+            html += `<tr>
+                <td>${i+1}</td>
+                <td>${item.ci||'Sin Asignar'}</td>
+                <td><b>${item.id}</b></td>
+                <td>${item.tip}</td>
+                <td>${item.brand||'-'}</td>
+                <td>${item.model||'-'}</td>
+                <td>${item.sn||'-'}</td>
+                <td>${age}</td>
+                <td>${year}</td>
+                <td style="text-align:center;"><i class="fas fa-times btn-remove-item" onclick="removeFromOutput(${i})"></i></td>
+            </tr>`;
+        });
+        html += `</tbody></table>`;
+        c.innerHTML = html;
+    }
+    
+    // REPLACES OLD removeFromOutput
+    removeFromOutput = function(idx) {
+        outputQueue.splice(idx, 1);
+        updateOutputBadge();
+        renderQueue(); // Update queue list
+        renderOutputList(); // Update old list if still exists
+        if(outputQueue.length === 0) closeOutputModal();
+    }
+
+    // REPLACES OLD openOutputModal
+    openOutputModal = function() {
+        document.getElementById('outputModal').style.display = 'flex'; 
+        document.getElementById('outOperador').value = document.getElementById('operador').value || 'Sistemas';
+        currentSessionFolio = Math.floor(Math.random()*10000)+5000;
+        document.getElementById('sessionFolioDisplay').innerText = `(Folio Sesión: ${currentSessionFolio})`;
+        evidenceFiles = []; renderEvidencePreviews(); 
+        loadSignaturesToForm(); renderQueue(); setOutputType('asignacion'); 
+    }
+
+    // REPLACES OLD closeOutputModal
+    closeOutputModal = function() { document.getElementById('outputModal').style.display = 'none'; }
+    
+    // NEW Functions
+    function setOutputType(type) {
+        currentOutputType = type;
+        document.querySelectorAll('.type-btn').forEach(b => b.classList.remove('active'));
+        document.querySelectorAll(`.type-btn[onclick*='${type}']`)[0].classList.add('active');
+        
+        ['formStandard','formDestruccion','formLaboratorio'].forEach(id=>document.getElementById(id).style.display='none');
+        ['approversSection'].forEach(id=>document.getElementById(id).style.display='none');
+        
+        document.querySelectorAll('.doc-section').forEach(d => d.classList.remove('active'));
+
+        const rowTicket = document.getElementById('rowTicket');
+        if(type === 'destruccion') rowTicket.style.display = 'none'; else rowTicket.style.display = 'flex';
+
+        if(type === 'destruccion') {
+            document.getElementById('formDestruccion').style.display = 'block';
+            document.getElementById('approversSection').style.display = 'block';
+            document.getElementById('docDestruccion').classList.add('active');
+        } else if (type === 'laboratorio') {
+            document.getElementById('formStandard').style.display = 'block'; 
+            document.getElementById('rowObs').style.display = 'none';
+            document.getElementById('formLaboratorio').style.display = 'block';
+            document.getElementById('docLaboratorio').classList.add('active');
+            
+            generatedLabQR = ""; document.getElementById('qrScanInput').value = "";
+            document.getElementById('btnConfirmarSalida').disabled = true;
+            document.getElementById('btnConfirmarSalida').style.background = '#ccc';
+        } else {
+            document.getElementById('formStandard').style.display = 'block';
+            document.getElementById('rowObs').style.display = 'flex';
+            
+            if(type === 'asignacion') document.getElementById('docAsignacion').classList.add('active');
+            if(type === 'planta') { document.getElementById('docPlantaTienda').classList.add('active'); document.getElementById('approversSection').style.display = 'block'; }
+            if(type === 'tienda') { document.getElementById('docPlantaTienda').classList.add('active'); document.getElementById('approversSection').style.display = 'block'; }
+
+            document.getElementById('rowPlanta').style.display = type === 'planta' ? 'flex' : 'none';
+            document.getElementById('rowTienda').style.display = type === 'tienda' ? 'flex' : 'none';
+        }
+        
+        if(type !== 'laboratorio') {
+            document.getElementById('btnConfirmarSalida').disabled = false;
+            document.getElementById('btnConfirmarSalida').style.background = 'var(--success)';
+        }
+    }
+
+    function checkLabQR() {
+        const val = document.getElementById('qrScanInput').value.trim();
+        if(val === generatedLabQR && generatedLabQR !== "") {
+            document.getElementById('qrMsg').innerText = "Correcto"; document.getElementById('qrMsg').style.color="green";
+            document.getElementById('btnConfirmarSalida').disabled = false; document.getElementById('btnConfirmarSalida').style.background = 'var(--success)';
+        }
+    }
+
+    function generarQRLabel() {
+        const ticket = document.getElementById('outTicket').value || 'NA';
+        const folio = currentSessionFolio;
+        const text = `SALIDA:${currentOutputType.toUpperCase()}\nTICKET:${ticket}\nFOLIO:${folio}\nITEMS:${outputQueue.length}`;
+        const box = document.getElementById('qrPrintArea'); box.innerHTML = '';
+        new QRCode(box, { text: text, width: 200, height: 200 });
+        setTimeout(() => {
+            const w = window.open('', '', 'width=400,height=400');
+            w.document.write(`<html><body style="text-align:center; font-family:sans-serif;"><h2>ETIQUETA CAJA</h2><div style="margin:20px;">${box.innerHTML}</div><p><b>FOLIO: ${folio}</b></p><p>Tipo: ${currentOutputType.toUpperCase()}</p><script>window.print();window.close();<\/script></body></html>`);
+            w.document.close();
+        }, 300);
+    }
+
+    function generarEtiquetasContenedores() {
+        const count = parseInt(document.getElementById('destContainerCount').value);
+        if(!count || count < 1) return alert("Ingrese una cantidad válida.");
+        const folio = currentSessionFolio; 
+        const date = new Date().toLocaleDateString();
+        const box = document.getElementById('qrContainerHidden');
+        
+        box.innerHTML = ''; 
+        for(let i=1; i<=count; i++) {
+            const divId = `qr-dest-${i}`;
+            const qrDiv = document.createElement('div'); qrDiv.id = divId; box.appendChild(qrDiv);
+            const text = `DESTRUCCION|FOLIO:${folio}|FECHA:${date}|CONT:${i}/${count}`;
+            new QRCode(qrDiv, { text: text, width: 300, height: 300 });
+        }
+
+        setTimeout(() => {
+            let printContent = `<html><head><style>body { font-family: sans-serif; } .label-page { page-break-after: always; text-align: center; border: 2px solid #000; padding: 20px; margin: 20px; height: 90vh; display: flex; flex-direction: column; justify-content: center; align-items: center; } .qr-div { margin: 20px auto; } h1 { font-size: 40px; margin: 10px 0; } h2 { font-size: 24px; margin: 5px 0; }</style></head><body>`;
+            for(let i=1; i<=count; i++) {
+                const qrHTML = document.getElementById(`qr-dest-${i}`).innerHTML;
+                printContent += `<div class="label-page"><h1>DESTRUCCIÓN</h1><div class="qr-div">${qrHTML}</div><h2>FOLIO: ${folio}</h2><h2>FECHA: ${date}</h2><h1>CONTENEDOR ${i} DE ${count}</h1></div>`;
+            }
+            printContent += `<script>window.print();window.close();<\/script></body></html>`;
+            const w = window.open('', '', 'width=800,height=600'); w.document.write(printContent); w.document.close();
+        }, 500);
+    }
+
+    function generarEtiquetasEquipos() {
+        if(outputQueue.length === 0) return alert("No hay equipos seleccionados.");
+        
+        let rows = prompt("¿Cuántas filas de etiquetas por hoja?", "6");
+        let cols = prompt("¿Cuántas columnas de etiquetas por hoja?", "3");
+        if(!rows || !cols) return;
+        
+        rows = parseInt(rows); cols = parseInt(cols);
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF();
+        const pageWidth = 210;
+        const pageHeight = 297;
+        const margin = 10;
+        
+        const cellW = (pageWidth - (margin*2)) / cols;
+        const cellH = (pageHeight - (margin*2)) / rows;
+        
+        const folio = currentSessionFolio;
+        const date = new Date().toLocaleDateString();
+        const box = document.getElementById('qrContainerHidden');
+        box.innerHTML = ''; 
+
+        outputQueue.forEach((item, idx) => {
+            const divId = `qr-eq-${idx}`;
+            const qrDiv = document.createElement('div'); qrDiv.id = divId; box.appendChild(qrDiv);
+            const text = `BAJA|${folio}|${item.id}|${item.sn}`;
+            new QRCode(qrDiv, { text: text, width: 100, height: 100 });
+        });
+
+        setTimeout(() => {
+            outputQueue.forEach((item, i) => {
+                if (i > 0 && i % (rows * cols) === 0) doc.addPage();
+                
+                const pageIndex = i % (rows * cols);
+                const r = Math.floor(pageIndex / cols);
+                const c = pageIndex % cols;
+                
+                const x = margin + (c * cellW);
+                const y = margin + (r * cellH);
+                
+                doc.setDrawColor(0); doc.rect(x+2, y+2, cellW-4, cellH-4);
+                doc.setFontSize(10); doc.setFont(undefined, 'bold'); doc.text(`BAJA - FOLIO: ${folio}`, x + 5, y + 8);
+                const qrImg = document.getElementById(`qr-eq-${i}`).querySelector('img');
+                if(qrImg) { try { doc.addImage(qrImg.src, 'JPEG', x + 5, y + 12, 25, 25); } catch(e){} }
+                doc.setFontSize(8); doc.setFont(undefined, 'normal');
+                let textX = x + 35; let textY = y + 15;
+                doc.text(`Activo: ${item.id}`, textX, textY); textY+=4;
+                doc.text(`Serie: ${item.sn||'-'}`, textX, textY); textY+=4;
+                doc.text(`Tipo: ${item.tip}`, textX, textY); textY+=4;
+                doc.text(`Fecha: ${date}`, textX, textY); textY+=6;
+                doc.setFont(undefined, 'bold'); doc.text(`Item ${i+1} de ${outputQueue.length}`, textX, textY);
+            });
+            doc.save(`Etiquetas_Equipos_${folio}.pdf`);
+        }, 800);
+    }
+
+    async function generarDocumentos() {
+        if(outputQueue.length === 0) return alert("No hay equipos.");
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF();
+        const pageWidth = doc.internal.pageSize.width;
+        const pageHeight = doc.internal.pageSize.height;
+        const blueColor = [0, 112, 192];
+        const fecha = new Date().toLocaleDateString();
+        const folio = currentSessionFolio; 
+        const ticket = document.getElementById('outTicket').value || 'S/N';
+        const operador = document.getElementById('outOperador').value;
+
+        if(currentOutputType === 'destruccion') {
+            const cia = document.getElementById('destCompanySelect').value;
+            const companyObj = companyList[cia];
+            const ciaName = companyObj.name;
+            const logo = companyObj.logo;
+
+            const drawHeaderFooter = (data) => {
+                const headerHeight = 12; 
+                doc.setFillColor(...blueColor); 
+                doc.rect(0, 0, pageWidth, headerHeight, 'F'); 
+                doc.rect(0, pageHeight - 15, pageWidth, 15, 'F'); 
+                
+                doc.setTextColor(0); 
+                if(logo) { try { doc.addImage(logo, 'JPEG', 15, 15, 30, 15); } catch(e){} } 
+                
+                doc.setFontSize(16); doc.text(ciaName, pageWidth/2, 20, {align:'center'}); 
+                doc.setFontSize(14); doc.text("BAJA DE MATERIAL DAÑADO", pageWidth/2, 28, {align:'center'});
+                
+                doc.setFontSize(10); doc.setFont(undefined, 'bold'); 
+                doc.text(`Folio: ${folio}`, pageWidth - 15, 20, { align: 'right' }); 
+                doc.text(`Fecha: ${fecha}`, pageWidth - 15, 25, { align: 'right' });
+                doc.setFont(undefined, 'normal');
+                
+                doc.setTextColor(255); doc.setFontSize(9); doc.text(`Página ${doc.getCurrentPageInfo().pageNumber}`, pageWidth - 20, pageHeight - 5);
+                doc.setTextColor(0);
+            };
+
+            doc.setFontSize(9);
+            const intro = "A continuación, se muestra la lista de equipos que deben causar baja del activo fijo derivado de daños físicos y/o fallas no reparables. Dicho equipamiento debe ser procesado para su destrucción bajo el procedimiento correspondiente avalado por el área de auditoría y control de activos de la empresa.";
+            doc.text(intro, 15, 45, { maxWidth: 180, align: "justify" });
+            
+            const tableBody = outputQueue.map((item, idx) => [idx+1, item.ci || 'Sin Asignar', item.id, item.tip, item.brand||'', item.model||'', item.sn||'', calcAge(item.fComp), (item.fComp ? item.fComp.split('-')[0] : 'N/D')]);
+            
+            doc.autoTable({ startY: 65, head: [['#', 'Empresa', 'Activo', 'Equipo', 'Marca', 'Modelo', 'Serie', 'Antigüedad', 'Año Adq.']], body: tableBody, theme: 'grid', headStyles: { fillColor: blueColor, textColor: 255 }, didDrawPage: drawHeaderFooter, margin: { top: 40 } });
+            
+            let y = doc.lastAutoTable.finalY + 20;
+            if(y > pageHeight - 60) { doc.addPage(); y = 50; drawHeaderFooter(); }
+            
+            let signHeaders = [], rowData = [];
+            for(let i=1; i<=5; i++) {
+                let r = document.getElementById(`signRole${i}`).value.trim();
+                let n = document.getElementById(`signName${i}`).value.trim();
+                let j = document.getElementById(`signJob${i}`).value.trim();
+                if(n) { signHeaders.push(r || "Firma"); rowData.push(n + "\n" + j); }
+            }
+            if(signHeaders.length > 0) doc.autoTable({ startY: y, head: [signHeaders], body: [rowData], theme: 'grid', headStyles: { fillColor: blueColor, textColor: 255, halign: 'center', valign: 'middle' }, bodyStyles: { minCellHeight: 25, halign: 'center', valign: 'bottom' }, styles: { fontSize: 8, cellPadding: 2 } });
+            
+            doc.save(`Baja_Destruccion_${folio}.pdf`);
+            return;
+        }
+
+        if(currentOutputType === 'laboratorio') {
+            const ing = document.getElementById('labIngeniero').value;
+            const mot = document.getElementById('labMotivo').value;
+            const labName = document.getElementById('labSelect').value;
+            generatedLabQR = `LAB-${ticket}-${folio}`;
+            
+            doc.setFontSize(16); doc.text(labName, pageWidth/2, 20, null, null, "center");
+            doc.setFontSize(12); doc.text(`ETIQUETA DE SALIDA - FOLIO ${folio}`, pageWidth/2, 28, null, null, "center");
+            
+            doc.setFontSize(10); 
+            doc.text(`Fecha: ${fecha}`, 15, 40); 
+            doc.text(`Ticket: ${ticket}`, 110, 40);
+            doc.text(`Ingeniero: ${ing}`, 15, 47);
+            
+            const usrName = document.getElementById('outNombre').value;
+            const usrArea = document.getElementById('outArea').value;
+            const usrNum = document.getElementById('outNumEmp').value;
+            doc.text(`Entregó: ${usrName} (${usrNum})`, 15, 54);
+            doc.text(`Área: ${usrArea}`, 110, 54);
+
+            doc.setFont(undefined, 'bold');
+            doc.text(`Motivo: ${mot}`, 15, 65);
+            doc.setFont(undefined, 'normal');
+            
+            const tableBody = outputQueue.map(item => [item.id, item.tip, item.brand, item.model, item.sn]);
+            doc.autoTable({ startY: 70, head: [['Activo', 'Equipo', 'Marca', 'Modelo', 'Serie']], body: tableBody, theme: 'striped' });
+            
+            const qrCanvas = document.createElement('canvas'); await QRCode.toCanvas(qrCanvas, generatedLabQR, { width: 150 });
+            let yQR = doc.lastAutoTable.finalY + 10;
+            doc.addImage(qrCanvas.toDataURL("image/jpeg"), 'JPEG', (pageWidth/2)-25, yQR, 50, 50);
+            doc.text("Escanear para confirmar recepción", pageWidth/2, yQR + 55, null, null, "center");
+            
+            doc.save(`Etiqueta_Lab_${ticket}.pdf`);
+            alert("Etiqueta generada. Escanee el QR para salir.");
+            return;
+        }
+
+        let mainTitle = "OPTIMA - AVANTE", subTitle = `SALIDA DE MATERIALES (${currentOutputType.toUpperCase()})`, useBlue = (currentOutputType === 'planta' || currentOutputType === 'tienda'), logo = savedLogos.planta; 
+        if(currentOutputType==='planta') { mainTitle="AVANTE (DTA)"; subTitle="SALIDA DE MATERIALES (PLANTA)"; logo=savedLogos.planta; }
+        if(currentOutputType==='tienda') { mainTitle="AVANTE (ALKA)"; subTitle="SALIDA DE MATERIALES (TIENDA)"; logo=savedLogos.tienda; }
+
+        if(useBlue) {
+            doc.setFillColor(0, 112, 192); doc.rect(0,0,pageWidth,20,'F');
+            doc.setTextColor(255); doc.setFontSize(16); doc.text(mainTitle, pageWidth/2, 12, null,null,"center");
+            doc.setTextColor(0); doc.setFontSize(12); doc.text(subTitle, pageWidth/2, 30, null,null,"center");
+            if(logo) { try{doc.addImage(logo,'JPEG',10,25,30,15);}catch(e){} }
+            doc.setFontSize(11); doc.setFont(undefined,'bold'); doc.text(`Folio: ${folio}`, pageWidth-15,30,{align:'right'}); doc.setFont(undefined,'normal');
+        } else {
+            doc.setFontSize(18); doc.text("OPTIMA - AVANTE", pageWidth/2, 20, null,null,"center");
+            doc.setFontSize(12); doc.text("ASIGNACIÓN DE EQUIPO", pageWidth/2, 30, null,null,"center");
+            doc.setFontSize(10); doc.text(`Folio: ${folio}`, pageWidth-15,30,{align:'right'});
+        }
+
+        let yS = 45;
+        doc.setFontSize(9); doc.setFont(undefined,'bold');
+        doc.text("ORIGEN", 15, yS); doc.line(15, yS+1, 90, yS+1); doc.setFont(undefined,'normal');
+        doc.text(`Fecha: ${fecha}`,15,yS+6); doc.text(`Ticket: ${ticket}`,15,yS+11); doc.text(`Envía: ${operador}`,15,yS+16);
+
+        doc.setFont(undefined,'bold'); doc.text("DESTINO", 110, yS); doc.line(110, yS+1, 195, yS+1); doc.setFont(undefined,'normal');
+        let destName = currentOutputType==='planta' ? document.getElementById('outPlantaNombre').value : (currentOutputType==='tienda' ? document.getElementById('outTiendaNombre').value : document.getElementById('outNombre').value);
+        doc.text(`Destino: ${destName}`,110,yS+6); doc.text(`Usuario: ${document.getElementById('outNombre').value}`,110,yS+11); doc.text(`Área: ${document.getElementById('outArea').value}`,110,yS+16);
+
+        let yT = yS + 30;
+        const table = outputQueue.map(i => [i.sn, i.id, i.tip, i.brand, i.model, i.fa||'', i.oc||'', `R${bodegas[bIdx].racks[i.r].name}`, i.val||'']);
+        doc.autoTable({ startY: yT, head: [['Serie','Activo','Equipo','Marca','Modelo','Factura','OC','Ubic.','Valor']], body: table, headStyles: { fillColor: useBlue?[0,112,192]:[40,40,40] } });
+
+        if(useBlue) renderApprovers(doc);
+        else { let y = doc.lastAutoTable.finalY + 30; doc.line(70,y,140,y); doc.text("Firma de Conformidad", 105,y+5,null,null,"center"); }
+        if(useBlue) { doc.setFillColor(0,112,192); doc.rect(0, doc.internal.pageSize.height-15, pageWidth, 15, 'F'); }
+        
+        doc.save(`Salida_${currentOutputType}_${ticket}.pdf`);
+    }
+
+    function renderApprovers(doc) {
+        let y = doc.lastAutoTable.finalY + 30;
+        let startX=15, curX=startX, gap=65, count=0;
+        doc.setFontSize(9);
+        for(let i=1; i<=5; i++) {
+            let n = document.getElementById(`signName${i}`).value;
+            let j = document.getElementById(`signJob${i}`).value;
+            let r = document.getElementById(`signRole${i}`).value;
+            if(n) {
+                if(r) { doc.setFont(undefined,'bold'); doc.text(r.toUpperCase(), curX+25, y-2, null,null,"center"); doc.setFont(undefined,'normal'); }
+                doc.line(curX,y,curX+50,y);
+                doc.text(n, curX+25,y+5,null,null,"center");
+                doc.setFontSize(8); doc.setTextColor(100); doc.text(j, curX+25,y+10,null,null,"center");
+                doc.setFontSize(9); doc.setTextColor(0);
+                curX+=gap; count++;
+                if(count===3) { curX=startX; y+=35; count=0; }
+            }
+        }
+    }
+
+    // REPLACES OLD executeOutput
+    confirmarSalidaCompleta = function() {
+        if(outputQueue.length===0) return;
+        
+        let docData = null;
+        let finalFile = null;
+
+        if(currentOutputType === 'asignacion') finalFile = document.getElementById('fileRespAsig').files[0];
+        else if(currentOutputType === 'planta') finalFile = document.getElementById('fileRespPlantaTienda').files[0];
+        else if(currentOutputType === 'tienda') finalFile = document.getElementById('fileRespPlantaTienda').files[0];
+        else if(currentOutputType === 'destruccion') {
+            finalFile = document.getElementById('fileRespDest').files[0];
+            if(evidenceFiles.length === 0) return alert("Falta evidencia fotográfica.");
+        }
+
+        if(currentOutputType !== 'laboratorio' && !finalFile) return alert("Falta archivo firmado.");
+        
+        docData = currentOutputType === 'laboratorio' ? "QR_PROCESS" : "PDF_SIGNED_MOCK"; 
+
+        const tick = document.getElementById('outTicket').value || 'NA';
+        const ts = new Date().toLocaleString();
+        
+        outputQueue.forEach(i => {
+            let idx = bodegas[bIdx].inv.findIndex(x=>x.id===i.id);
+            if(idx>-1) bodegas[bIdx].inv.splice(idx,1);
+            salidasLog.unshift({ ...i, salidaData: { fecha:ts, tipo:currentOutputType, ticket:tick, doc:docData, evidence: evidenceFiles } });
+            auditLog.unshift({ fecha:ts, bod: bodegas[bIdx].nombre, op: "Admin", ev: `SALIDA (${currentOutputType})`, id:i.id, info: `Ticket: ${tick}`, loc: "SALIDA" });
+        });
+        alert("Salida Confirmada.");
+        outputQueue=[]; closeOutputModal(); updateOutputBadge(); saveDB(); renderAll();
+    }
+
+</body></html>');
             w.document.close(); w.focus(); setTimeout(()=>{w.print();w.close()},500);
         }, 300);
     }
@@ -1456,8 +2332,1232 @@
         document.getElementById('notesA').value=""; document.getElementById('urlA').value="";
         if(!pins.Op) document.getElementById('operador').value=""; aplicarReglaTipo(); checkVacante(); }
     function reimprimir(id) { let item = bodegas[bIdx].inv.find(e => e.id === id); if(item) imprimirQR(item); }
-    function imprimirQR(eq) { document.getElementById('lId').innerText=eq.id; document.getElementById('lSn').innerText=eq.sn||'N/A'; document.getElementById('lMod').innerText=eq.model||'N/A'; document.getElementById('lBr').innerText=eq.brand||'N/A'; document.getElementById('lHost').innerText=eq.host||'N/A'; document.getElementById('lTi').innerText=eq.tip; document.getElementById('lSt').innerText=eq.st; document.getElementById('lCi').innerText=eq.ci; document.getElementById('lProv').innerText=eq.prov||'N/A'; document.getElementById('lFa').innerText=eq.fa||'N/A'; document.getElementById('lOc').innerText=eq.oc||'N/A'; document.getElementById('lFIng').innerText=eq.fIng||'N/A'; document.getElementById('lFComp').innerText=eq.fComp||'N/A'; let rName = eq.r === -1 ? "RECEPCION" : bodegas[bIdx].racks[eq.r].name; document.getElementById('lLoc').innerText=`${rName}-N${eq.n} (${bodegas[bIdx].nombre})`; let fullData = `ID:${eq.id}\nSN:${eq.sn||''}\nMARCA:${eq.brand||''}\nMOD:${eq.model||''}\nHOST:${eq.host||''}\nTIPO:${eq.tip}\nST:${eq.st}\nCIA:${eq.ci}\nPROV:${eq.prov||''}\nFACT:${eq.fa||''}\nF.ING:${eq.fIng||''}\nF.COMP:${eq.fComp||''}\nUBIC:${bodegas[bIdx].nombre}>${rName}-N${eq.n}`; let box = document.getElementById("qrPlace"); box.innerHTML = ""; new QRCode(box, {text: fullData, width: 130, height: 130, correctLevel : QRCode.CorrectLevel.H}); setTimeout(()=>{let w=window.open('','','width=380,height=650');w.document.write('<html><head><title>Etiqueta</title></head><body style="display:flex;justify-content:center;align-items:center;height:100vh;margin:0;background:#f0f2f5;">'+document.getElementById('printArea').innerHTML+'</body></html>');w.document.close();w.focus();setTimeout(()=>{w.print();w.close()},500);},300); }
+    function imprimirQR(eq) { document.getElementById('lId').innerText=eq.id; document.getElementById('lSn').innerText=eq.sn||'N/A'; document.getElementById('lMod').innerText=eq.model||'N/A'; document.getElementById('lBr').innerText=eq.brand||'N/A'; document.getElementById('lHost').innerText=eq.host||'N/A'; document.getElementById('lTi').innerText=eq.tip; document.getElementById('lSt').innerText=eq.st; document.getElementById('lCi').innerText=eq.ci; document.getElementById('lProv').innerText=eq.prov||'N/A'; document.getElementById('lFa').innerText=eq.fa||'N/A'; document.getElementById('lOc').innerText=eq.oc||'N/A'; document.getElementById('lFIng').innerText=eq.fIng||'N/A'; document.getElementById('lFComp').innerText=eq.fComp||'N/A'; let rName = eq.r === -1 ? "RECEPCION" : bodegas[bIdx].racks[eq.r].name; document.getElementById('lLoc').innerText=`${rName}-N${eq.n} (${bodegas[bIdx].nombre})`; let fullData = `ID:${eq.id}\nSN:${eq.sn||''}\nMARCA:${eq.brand||''}\nMOD:${eq.model||''}\nHOST:${eq.host||''}\nTIPO:${eq.tip}\nST:${eq.st}\nCIA:${eq.ci}\nPROV:${eq.prov||''}\nFACT:${eq.fa||''}\nF.ING:${eq.fIng||''}\nF.COMP:${eq.fComp||''}\nUBIC:${bodegas[bIdx].nombre}>${rName}-N${eq.n}`; let box = document.getElementById("qrPlace"); box.innerHTML = ""; new QRCode(box, {text: fullData, width: 130, height: 130, correctLevel : QRCode.CorrectLevel.H}); setTimeout(()=>{let w=window.open('','','width=380,height=650');w.document.write('<html><head><title>Etiqueta</title></head><body style="display:flex;justify-content:center;align-items:center;height:100vh;margin:0;background:#f0f2f5;">'+document.getElementById('printArea').innerHTML+'
+    // --- NEW OUTPUT MODULE LOGIC (v12.38) ---
+    let savedSignatures = { names: [], jobs: [], roles: [] };
+    let savedLogos = { planta: null, tienda: null }; 
+    let companyList = [ { name: "AVANTE (DTA)", logo: null }, { name: "AVANTE (ALKA)", logo: null } ];
+    let labList = ["Laboratorio HP", "Lenovo Service", "Soporte Interno"];
+    let savedEngineers = ["Ingeniero 1"];
+    let evidenceFiles = []; 
+    let currentOutputType = 'asignacion'; 
+    let generatedLabQR = ""; 
+    let currentSessionFolio = "";
+    let salidasLog = [];
+
+    // Override LoadDB to include new fields
+    const ORIGINAL_LOAD_DB = loadDB;
+    loadDB = function() {
+        ORIGINAL_LOAD_DB();
+        const data = localStorage.getItem(DB_KEY);
+        if(data) {
+            try {
+                const parsed = JSON.parse(data);
+                salidasLog = parsed.salidasLog || [];
+                savedSignatures = parsed.savedSignatures || { names: [], jobs: [], roles: [] };
+                savedLogos = parsed.savedLogos || { planta: null, tienda: null };
+                savedEngineers = parsed.savedEngineers || ["Ingeniero 1"];
+                companyList = parsed.companyList || [ { name: "AVANTE (DTA)", logo: null }, { name: "AVANTE (ALKA)", logo: null } ];
+                labList = parsed.labList || ["Laboratorio HP", "Lenovo Service", "Soporte Interno"];
+            } catch(e) { console.error("Error loading new fields", e); }
+        }
+        // Init UI
+        if(savedLogos.planta) { try{document.getElementById('previewPlanta').src = savedLogos.planta; document.getElementById('previewPlanta').style.display='inline-block'; document.getElementById('txtPlanta').style.display='none';}catch(e){} }
+        if(savedLogos.tienda) { try{document.getElementById('previewTienda').src = savedLogos.tienda; document.getElementById('previewTienda').style.display='inline-block'; document.getElementById('txtTienda').style.display='none';}catch(e){} }
+        updateEngineerList();
+        renderSignRows();
+        renderCompanySelect();
+        renderLabSelect();
+    };
+
+    // Override SaveDB
+    const ORIGINAL_SAVE_DB = saveDB;
+    saveDB = function() {
+        const data = {
+            bodegas, auditLog, globalDocs, opciones, rules,
+            salidasLog, savedSignatures, savedLogos, savedEngineers, companyList, labList
+        };
+        try {
+            localStorage.setItem(DB_KEY, JSON.stringify(data));
+            console.log("DB Guardada (Extended)");
+        } catch (e) {
+            console.error("Error guardando DB", e);
+        }
+    };
+
+    /* --- EMPRESAS & LABS --- */
+    function renderCompanySelect() {
+        const sel = document.getElementById('destCompanySelect');
+        if(!sel) return;
+        sel.innerHTML = companyList.map((c, i) => `<option value="${i}">${c.name}</option>`).join('');
+    }
+
+    function renderLabSelect() {
+        const sel = document.getElementById('labSelect');
+        if(!sel) return;
+        sel.innerHTML = labList.map(l => `<option value="${l}">${l}</option>`).join('');
+    }
+
+    function addNewLab() {
+        const name = prompt("Nombre del nuevo laboratorio:");
+        if(name) {
+            labList.push(name);
+            saveDB();
+            renderLabSelect();
+            document.getElementById('labSelect').value = name;
+        }
+    }
+
+    /* --- LOGOS --- */
+    function previewNewCompanyLogo() {
+        const file = document.getElementById('newCompanyLogo').files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = (e) => { document.getElementById('newCompanyPreview').src = e.target.result; document.getElementById('newCompanyPreview').style.display='inline-block'; };
+            reader.readAsDataURL(file);
+        }
+    }
+
+    function saveNewCompany() {
+        const name = document.getElementById('newCompanyName').value.trim();
+        const src = document.getElementById('newCompanyPreview').src;
+        if(!name) return alert("Ingrese un nombre.");
+        let logoData = null;
+        if(src && src.startsWith('data:image')) logoData = src;
+        companyList.push({ name: name, logo: logoData });
+        saveDB();
+        renderCompanySelect();
+        alert("Empresa agregada.");
+        document.getElementById('companyModal').style.display='none';
+    }
+
+    /* --- HELPERS --- */
+    function calcAge(dateStr) {
+        if(!dateStr) return "N/D";
+        const d = new Date(dateStr);
+        const now = new Date();
+        const diffTime = Math.abs(now - d);
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)); 
+        if(diffDays > 365) return (diffDays/365).toFixed(1) + " años";
+        return diffDays + " días";
+    }
+
+    /* --- LOGOS & INGENIEROS --- */
+    function previewLogo(type) {
+        const idInput = type === 'planta' ? 'logoInputPlanta' : 'logoInputTienda';
+        const idImg = type === 'planta' ? 'previewPlanta' : 'previewTienda';
+        const idTxt = type === 'planta' ? 'txtPlanta' : 'txtTienda';
+        const file = document.getElementById(idInput).files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                document.getElementById(idImg).src = e.target.result;
+                document.getElementById(idImg).style.display = 'inline-block';
+                document.getElementById(idTxt).style.display = 'none';
+            };
+            reader.readAsDataURL(file);
+        }
+    }
+    
+    function updateEngineerList() {
+        const l = document.getElementById('listIngenieros');
+        if(!l) return;
+        l.innerHTML = savedEngineers.map(e => `<option value="${e}">`).join('');
+    }
+    function saveEngineer() {
+        const v = document.getElementById('labIngeniero').value;
+        if(v && !savedEngineers.includes(v)) { savedEngineers.push(v); saveDB(); updateEngineerList(); alert("Ingeniero guardado."); }
+    }
+
+    /* --- FIRMAS --- */
+    function renderSignRows() {
+        let html = '';
+        for(let i=1; i<=5; i++) {
+            html += `<div class="sign-row">
+                <div class="input-row"><i class="fas fa-user"></i><input type="text" id="signName${i}" placeholder="Nombre ${i}"></div>
+                <div class="input-row"><i class="fas fa-briefcase"></i><input type="text" id="signJob${i}" placeholder="Puesto ${i}"></div>
+                <div class="input-row"><i class="fas fa-tasks"></i><input type="text" id="signRole${i}" placeholder="Rol ${i}"></div>
+            </div>`;
+        }
+        const c = document.getElementById('signRowsContainer');
+        if(c) c.innerHTML = html;
+    }
+    function loadSignaturesToForm() {
+        for(let i=0; i<5; i++) {
+            if(savedSignatures.names[i]) document.getElementById(`signName${i+1}`).value = savedSignatures.names[i];
+            if(savedSignatures.jobs[i]) document.getElementById(`signJob${i+1}`).value = savedSignatures.jobs[i];
+            if(savedSignatures.roles[i]) document.getElementById(`signRole${i+1}`).value = savedSignatures.roles[i];
+        }
+    }
+    function saveSignatureConfig() {
+        let n=[], j=[], r=[];
+        for(let i=1; i<=5; i++) {
+            n.push(document.getElementById(`signName${i}`).value);
+            j.push(document.getElementById(`signJob${i}`).value);
+            r.push(document.getElementById(`signRole${i}`).value);
+        }
+        savedSignatures = { names:n, jobs:j, roles:r };
+        saveDB(); alert("Firmas guardadas.");
+    }
+
+    /* --- EVIDENCIA MULTIPLE --- */
+    function handleEvidenceSelection() {
+        const input = document.getElementById('fileEvidence');
+        const files = Array.from(input.files);
+        files.forEach(file => {
+            const reader = new FileReader();
+            reader.onload = (e) => { evidenceFiles.push(e.target.result); renderEvidencePreviews(); };
+            reader.readAsDataURL(file);
+        });
+        input.value = ""; 
+    }
+    function renderEvidencePreviews() {
+        const c = document.getElementById('evidencePreviewContainer');
+        c.innerHTML = evidenceFiles.map((src, idx) => `<div class="evidence-thumb"><img src="${src}"><div class="btn-del-img" onclick="removeEvidence(${idx})">x</div></div>`).join('');
+    }
+    function removeEvidence(idx) { evidenceFiles.splice(idx, 1); renderEvidencePreviews(); }
+
+    /* --- BUSCADOR Y SELECCION --- */
+    function openSearchSelection() {
+        document.getElementById('searchSelectionModal').style.display='flex';
+        renderSearchSelectionTable();
+    }
+    function renderSearchSelectionTable() {
+        const filter = document.getElementById('searchSelectInput').value.toLowerCase();
+        const tbody = document.getElementById('searchSelectionBody');
+        tbody.innerHTML = "";
+        let filtered = bodegas[bIdx].inv.filter(i => i.id.toLowerCase().includes(filter) || (i.sn && i.sn.toLowerCase().includes(filter)) || (i.model && i.model.toLowerCase().includes(filter)));
+        filtered = filtered.filter(i => !outputQueue.some(q => q.id === i.id));
+        filtered.forEach(i => {
+            const ubic = i.r === -1 ? "Recepción" : `${bodegas[bIdx].racks[i.r].name}-N${i.n}`;
+            tbody.innerHTML += `<tr><td><input type="checkbox" class="chk-search-select" value="${i.id}"></td><td><b>${i.id}</b></td><td>${i.sn||'-'}</td><td>${i.brand||'-'}</td><td>${i.model||'-'}</td><td>${i.tip}</td><td>${ubic}</td></tr>`;
+        });
+        document.getElementById('searchCount').innerText = "Filtrados: " + filtered.length;
+    }
+    function toggleAllSearch(s) { document.querySelectorAll('.chk-search-select').forEach(c => c.checked = s.checked); }
+    function addFromSearchSelection() {
+        document.querySelectorAll('.chk-search-select:checked').forEach(c => {
+            const item = bodegas[bIdx].inv.find(i => i.id === c.value);
+            if(item) outputQueue.push(item);
+        });
+        updateOutputBadge(); renderQueue(); document.getElementById('searchSelectionModal').style.display='none';
+    }
+
+    /* --- GESTION COLA DETALLADA --- */
+    function renderQueue() {
+        const c = document.getElementById('queueListContainer');
+        if(!c) return;
+        if(outputQueue.length===0) { c.innerHTML='<div style="padding:15px;text-align:center;color:#ccc;">Cola vacía. Use "Buscar y Agregar".</div>'; return; }
+        
+        let html = `<table class="mini-table">
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>Empresa</th>
+                    <th>Activo</th>
+                    <th>Equipo</th>
+                    <th>Marca</th>
+                    <th>Modelo</th>
+                    <th>Serie</th>
+                    <th>Antigüedad</th>
+                    <th>Año Adq</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>`;
+        
+        outputQueue.forEach((item, i) => {
+            let age = calcAge(item.fComp);
+            let year = item.fComp ? item.fComp.split('-')[0] : 'N/D';
+            html += `<tr>
+                <td>${i+1}</td>
+                <td>${item.ci||'Sin Asignar'}</td>
+                <td><b>${item.id}</b></td>
+                <td>${item.tip}</td>
+                <td>${item.brand||'-'}</td>
+                <td>${item.model||'-'}</td>
+                <td>${item.sn||'-'}</td>
+                <td>${age}</td>
+                <td>${year}</td>
+                <td style="text-align:center;"><i class="fas fa-times btn-remove-item" onclick="removeFromOutput(${i})"></i></td>
+            </tr>`;
+        });
+        html += `</tbody></table>`;
+        c.innerHTML = html;
+    }
+    
+    // REPLACES OLD removeFromOutput
+    removeFromOutput = function(idx) {
+        outputQueue.splice(idx, 1);
+        updateOutputBadge();
+        renderQueue(); // Update queue list
+        renderOutputList(); // Update old list if still exists
+        if(outputQueue.length === 0) closeOutputModal();
+    }
+
+    // REPLACES OLD openOutputModal
+    openOutputModal = function() {
+        document.getElementById('outputModal').style.display = 'flex'; 
+        document.getElementById('outOperador').value = document.getElementById('operador').value || 'Sistemas';
+        currentSessionFolio = Math.floor(Math.random()*10000)+5000;
+        document.getElementById('sessionFolioDisplay').innerText = `(Folio Sesión: ${currentSessionFolio})`;
+        evidenceFiles = []; renderEvidencePreviews(); 
+        loadSignaturesToForm(); renderQueue(); setOutputType('asignacion'); 
+    }
+
+    // REPLACES OLD closeOutputModal
+    closeOutputModal = function() { document.getElementById('outputModal').style.display = 'none'; }
+    
+    // NEW Functions
+    function setOutputType(type) {
+        currentOutputType = type;
+        document.querySelectorAll('.type-btn').forEach(b => b.classList.remove('active'));
+        document.querySelectorAll(`.type-btn[onclick*='${type}']`)[0].classList.add('active');
+        
+        ['formStandard','formDestruccion','formLaboratorio'].forEach(id=>document.getElementById(id).style.display='none');
+        ['approversSection'].forEach(id=>document.getElementById(id).style.display='none');
+        
+        document.querySelectorAll('.doc-section').forEach(d => d.classList.remove('active'));
+
+        const rowTicket = document.getElementById('rowTicket');
+        if(type === 'destruccion') rowTicket.style.display = 'none'; else rowTicket.style.display = 'flex';
+
+        if(type === 'destruccion') {
+            document.getElementById('formDestruccion').style.display = 'block';
+            document.getElementById('approversSection').style.display = 'block';
+            document.getElementById('docDestruccion').classList.add('active');
+        } else if (type === 'laboratorio') {
+            document.getElementById('formStandard').style.display = 'block'; 
+            document.getElementById('rowObs').style.display = 'none';
+            document.getElementById('formLaboratorio').style.display = 'block';
+            document.getElementById('docLaboratorio').classList.add('active');
+            
+            generatedLabQR = ""; document.getElementById('qrScanInput').value = "";
+            document.getElementById('btnConfirmarSalida').disabled = true;
+            document.getElementById('btnConfirmarSalida').style.background = '#ccc';
+        } else {
+            document.getElementById('formStandard').style.display = 'block';
+            document.getElementById('rowObs').style.display = 'flex';
+            
+            if(type === 'asignacion') document.getElementById('docAsignacion').classList.add('active');
+            if(type === 'planta') { document.getElementById('docPlantaTienda').classList.add('active'); document.getElementById('approversSection').style.display = 'block'; }
+            if(type === 'tienda') { document.getElementById('docPlantaTienda').classList.add('active'); document.getElementById('approversSection').style.display = 'block'; }
+
+            document.getElementById('rowPlanta').style.display = type === 'planta' ? 'flex' : 'none';
+            document.getElementById('rowTienda').style.display = type === 'tienda' ? 'flex' : 'none';
+        }
+        
+        if(type !== 'laboratorio') {
+            document.getElementById('btnConfirmarSalida').disabled = false;
+            document.getElementById('btnConfirmarSalida').style.background = 'var(--success)';
+        }
+    }
+
+    function checkLabQR() {
+        const val = document.getElementById('qrScanInput').value.trim();
+        if(val === generatedLabQR && generatedLabQR !== "") {
+            document.getElementById('qrMsg').innerText = "Correcto"; document.getElementById('qrMsg').style.color="green";
+            document.getElementById('btnConfirmarSalida').disabled = false; document.getElementById('btnConfirmarSalida').style.background = 'var(--success)';
+        }
+    }
+
+    function generarQRLabel() {
+        const ticket = document.getElementById('outTicket').value || 'NA';
+        const folio = currentSessionFolio;
+        const text = `SALIDA:${currentOutputType.toUpperCase()}\nTICKET:${ticket}\nFOLIO:${folio}\nITEMS:${outputQueue.length}`;
+        const box = document.getElementById('qrPrintArea'); box.innerHTML = '';
+        new QRCode(box, { text: text, width: 200, height: 200 });
+        setTimeout(() => {
+            const w = window.open('', '', 'width=400,height=400');
+            w.document.write(`<html><body style="text-align:center; font-family:sans-serif;"><h2>ETIQUETA CAJA</h2><div style="margin:20px;">${box.innerHTML}</div><p><b>FOLIO: ${folio}</b></p><p>Tipo: ${currentOutputType.toUpperCase()}</p><script>window.print();window.close();<\/script></body></html>`);
+            w.document.close();
+        }, 300);
+    }
+
+    function generarEtiquetasContenedores() {
+        const count = parseInt(document.getElementById('destContainerCount').value);
+        if(!count || count < 1) return alert("Ingrese una cantidad válida.");
+        const folio = currentSessionFolio; 
+        const date = new Date().toLocaleDateString();
+        const box = document.getElementById('qrContainerHidden');
+        
+        box.innerHTML = ''; 
+        for(let i=1; i<=count; i++) {
+            const divId = `qr-dest-${i}`;
+            const qrDiv = document.createElement('div'); qrDiv.id = divId; box.appendChild(qrDiv);
+            const text = `DESTRUCCION|FOLIO:${folio}|FECHA:${date}|CONT:${i}/${count}`;
+            new QRCode(qrDiv, { text: text, width: 300, height: 300 });
+        }
+
+        setTimeout(() => {
+            let printContent = `<html><head><style>body { font-family: sans-serif; } .label-page { page-break-after: always; text-align: center; border: 2px solid #000; padding: 20px; margin: 20px; height: 90vh; display: flex; flex-direction: column; justify-content: center; align-items: center; } .qr-div { margin: 20px auto; } h1 { font-size: 40px; margin: 10px 0; } h2 { font-size: 24px; margin: 5px 0; }</style></head><body>`;
+            for(let i=1; i<=count; i++) {
+                const qrHTML = document.getElementById(`qr-dest-${i}`).innerHTML;
+                printContent += `<div class="label-page"><h1>DESTRUCCIÓN</h1><div class="qr-div">${qrHTML}</div><h2>FOLIO: ${folio}</h2><h2>FECHA: ${date}</h2><h1>CONTENEDOR ${i} DE ${count}</h1></div>`;
+            }
+            printContent += `<script>window.print();window.close();<\/script></body></html>`;
+            const w = window.open('', '', 'width=800,height=600'); w.document.write(printContent); w.document.close();
+        }, 500);
+    }
+
+    function generarEtiquetasEquipos() {
+        if(outputQueue.length === 0) return alert("No hay equipos seleccionados.");
+        
+        let rows = prompt("¿Cuántas filas de etiquetas por hoja?", "6");
+        let cols = prompt("¿Cuántas columnas de etiquetas por hoja?", "3");
+        if(!rows || !cols) return;
+        
+        rows = parseInt(rows); cols = parseInt(cols);
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF();
+        const pageWidth = 210;
+        const pageHeight = 297;
+        const margin = 10;
+        
+        const cellW = (pageWidth - (margin*2)) / cols;
+        const cellH = (pageHeight - (margin*2)) / rows;
+        
+        const folio = currentSessionFolio;
+        const date = new Date().toLocaleDateString();
+        const box = document.getElementById('qrContainerHidden');
+        box.innerHTML = ''; 
+
+        outputQueue.forEach((item, idx) => {
+            const divId = `qr-eq-${idx}`;
+            const qrDiv = document.createElement('div'); qrDiv.id = divId; box.appendChild(qrDiv);
+            const text = `BAJA|${folio}|${item.id}|${item.sn}`;
+            new QRCode(qrDiv, { text: text, width: 100, height: 100 });
+        });
+
+        setTimeout(() => {
+            outputQueue.forEach((item, i) => {
+                if (i > 0 && i % (rows * cols) === 0) doc.addPage();
+                
+                const pageIndex = i % (rows * cols);
+                const r = Math.floor(pageIndex / cols);
+                const c = pageIndex % cols;
+                
+                const x = margin + (c * cellW);
+                const y = margin + (r * cellH);
+                
+                doc.setDrawColor(0); doc.rect(x+2, y+2, cellW-4, cellH-4);
+                doc.setFontSize(10); doc.setFont(undefined, 'bold'); doc.text(`BAJA - FOLIO: ${folio}`, x + 5, y + 8);
+                const qrImg = document.getElementById(`qr-eq-${i}`).querySelector('img');
+                if(qrImg) { try { doc.addImage(qrImg.src, 'JPEG', x + 5, y + 12, 25, 25); } catch(e){} }
+                doc.setFontSize(8); doc.setFont(undefined, 'normal');
+                let textX = x + 35; let textY = y + 15;
+                doc.text(`Activo: ${item.id}`, textX, textY); textY+=4;
+                doc.text(`Serie: ${item.sn||'-'}`, textX, textY); textY+=4;
+                doc.text(`Tipo: ${item.tip}`, textX, textY); textY+=4;
+                doc.text(`Fecha: ${date}`, textX, textY); textY+=6;
+                doc.setFont(undefined, 'bold'); doc.text(`Item ${i+1} de ${outputQueue.length}`, textX, textY);
+            });
+            doc.save(`Etiquetas_Equipos_${folio}.pdf`);
+        }, 800);
+    }
+
+    async function generarDocumentos() {
+        if(outputQueue.length === 0) return alert("No hay equipos.");
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF();
+        const pageWidth = doc.internal.pageSize.width;
+        const pageHeight = doc.internal.pageSize.height;
+        const blueColor = [0, 112, 192];
+        const fecha = new Date().toLocaleDateString();
+        const folio = currentSessionFolio; 
+        const ticket = document.getElementById('outTicket').value || 'S/N';
+        const operador = document.getElementById('outOperador').value;
+
+        if(currentOutputType === 'destruccion') {
+            const cia = document.getElementById('destCompanySelect').value;
+            const companyObj = companyList[cia];
+            const ciaName = companyObj.name;
+            const logo = companyObj.logo;
+
+            const drawHeaderFooter = (data) => {
+                const headerHeight = 12; 
+                doc.setFillColor(...blueColor); 
+                doc.rect(0, 0, pageWidth, headerHeight, 'F'); 
+                doc.rect(0, pageHeight - 15, pageWidth, 15, 'F'); 
+                
+                doc.setTextColor(0); 
+                if(logo) { try { doc.addImage(logo, 'JPEG', 15, 15, 30, 15); } catch(e){} } 
+                
+                doc.setFontSize(16); doc.text(ciaName, pageWidth/2, 20, {align:'center'}); 
+                doc.setFontSize(14); doc.text("BAJA DE MATERIAL DAÑADO", pageWidth/2, 28, {align:'center'});
+                
+                doc.setFontSize(10); doc.setFont(undefined, 'bold'); 
+                doc.text(`Folio: ${folio}`, pageWidth - 15, 20, { align: 'right' }); 
+                doc.text(`Fecha: ${fecha}`, pageWidth - 15, 25, { align: 'right' });
+                doc.setFont(undefined, 'normal');
+                
+                doc.setTextColor(255); doc.setFontSize(9); doc.text(`Página ${doc.getCurrentPageInfo().pageNumber}`, pageWidth - 20, pageHeight - 5);
+                doc.setTextColor(0);
+            };
+
+            doc.setFontSize(9);
+            const intro = "A continuación, se muestra la lista de equipos que deben causar baja del activo fijo derivado de daños físicos y/o fallas no reparables. Dicho equipamiento debe ser procesado para su destrucción bajo el procedimiento correspondiente avalado por el área de auditoría y control de activos de la empresa.";
+            doc.text(intro, 15, 45, { maxWidth: 180, align: "justify" });
+            
+            const tableBody = outputQueue.map((item, idx) => [idx+1, item.ci || 'Sin Asignar', item.id, item.tip, item.brand||'', item.model||'', item.sn||'', calcAge(item.fComp), (item.fComp ? item.fComp.split('-')[0] : 'N/D')]);
+            
+            doc.autoTable({ startY: 65, head: [['#', 'Empresa', 'Activo', 'Equipo', 'Marca', 'Modelo', 'Serie', 'Antigüedad', 'Año Adq.']], body: tableBody, theme: 'grid', headStyles: { fillColor: blueColor, textColor: 255 }, didDrawPage: drawHeaderFooter, margin: { top: 40 } });
+            
+            let y = doc.lastAutoTable.finalY + 20;
+            if(y > pageHeight - 60) { doc.addPage(); y = 50; drawHeaderFooter(); }
+            
+            let signHeaders = [], rowData = [];
+            for(let i=1; i<=5; i++) {
+                let r = document.getElementById(`signRole${i}`).value.trim();
+                let n = document.getElementById(`signName${i}`).value.trim();
+                let j = document.getElementById(`signJob${i}`).value.trim();
+                if(n) { signHeaders.push(r || "Firma"); rowData.push(n + "\n" + j); }
+            }
+            if(signHeaders.length > 0) doc.autoTable({ startY: y, head: [signHeaders], body: [rowData], theme: 'grid', headStyles: { fillColor: blueColor, textColor: 255, halign: 'center', valign: 'middle' }, bodyStyles: { minCellHeight: 25, halign: 'center', valign: 'bottom' }, styles: { fontSize: 8, cellPadding: 2 } });
+            
+            doc.save(`Baja_Destruccion_${folio}.pdf`);
+            return;
+        }
+
+        if(currentOutputType === 'laboratorio') {
+            const ing = document.getElementById('labIngeniero').value;
+            const mot = document.getElementById('labMotivo').value;
+            const labName = document.getElementById('labSelect').value;
+            generatedLabQR = `LAB-${ticket}-${folio}`;
+            
+            doc.setFontSize(16); doc.text(labName, pageWidth/2, 20, null, null, "center");
+            doc.setFontSize(12); doc.text(`ETIQUETA DE SALIDA - FOLIO ${folio}`, pageWidth/2, 28, null, null, "center");
+            
+            doc.setFontSize(10); 
+            doc.text(`Fecha: ${fecha}`, 15, 40); 
+            doc.text(`Ticket: ${ticket}`, 110, 40);
+            doc.text(`Ingeniero: ${ing}`, 15, 47);
+            
+            const usrName = document.getElementById('outNombre').value;
+            const usrArea = document.getElementById('outArea').value;
+            const usrNum = document.getElementById('outNumEmp').value;
+            doc.text(`Entregó: ${usrName} (${usrNum})`, 15, 54);
+            doc.text(`Área: ${usrArea}`, 110, 54);
+
+            doc.setFont(undefined, 'bold');
+            doc.text(`Motivo: ${mot}`, 15, 65);
+            doc.setFont(undefined, 'normal');
+            
+            const tableBody = outputQueue.map(item => [item.id, item.tip, item.brand, item.model, item.sn]);
+            doc.autoTable({ startY: 70, head: [['Activo', 'Equipo', 'Marca', 'Modelo', 'Serie']], body: tableBody, theme: 'striped' });
+            
+            const qrCanvas = document.createElement('canvas'); await QRCode.toCanvas(qrCanvas, generatedLabQR, { width: 150 });
+            let yQR = doc.lastAutoTable.finalY + 10;
+            doc.addImage(qrCanvas.toDataURL("image/jpeg"), 'JPEG', (pageWidth/2)-25, yQR, 50, 50);
+            doc.text("Escanear para confirmar recepción", pageWidth/2, yQR + 55, null, null, "center");
+            
+            doc.save(`Etiqueta_Lab_${ticket}.pdf`);
+            alert("Etiqueta generada. Escanee el QR para salir.");
+            return;
+        }
+
+        let mainTitle = "OPTIMA - AVANTE", subTitle = `SALIDA DE MATERIALES (${currentOutputType.toUpperCase()})`, useBlue = (currentOutputType === 'planta' || currentOutputType === 'tienda'), logo = savedLogos.planta; 
+        if(currentOutputType==='planta') { mainTitle="AVANTE (DTA)"; subTitle="SALIDA DE MATERIALES (PLANTA)"; logo=savedLogos.planta; }
+        if(currentOutputType==='tienda') { mainTitle="AVANTE (ALKA)"; subTitle="SALIDA DE MATERIALES (TIENDA)"; logo=savedLogos.tienda; }
+
+        if(useBlue) {
+            doc.setFillColor(0, 112, 192); doc.rect(0,0,pageWidth,20,'F');
+            doc.setTextColor(255); doc.setFontSize(16); doc.text(mainTitle, pageWidth/2, 12, null,null,"center");
+            doc.setTextColor(0); doc.setFontSize(12); doc.text(subTitle, pageWidth/2, 30, null,null,"center");
+            if(logo) { try{doc.addImage(logo,'JPEG',10,25,30,15);}catch(e){} }
+            doc.setFontSize(11); doc.setFont(undefined,'bold'); doc.text(`Folio: ${folio}`, pageWidth-15,30,{align:'right'}); doc.setFont(undefined,'normal');
+        } else {
+            doc.setFontSize(18); doc.text("OPTIMA - AVANTE", pageWidth/2, 20, null,null,"center");
+            doc.setFontSize(12); doc.text("ASIGNACIÓN DE EQUIPO", pageWidth/2, 30, null,null,"center");
+            doc.setFontSize(10); doc.text(`Folio: ${folio}`, pageWidth-15,30,{align:'right'});
+        }
+
+        let yS = 45;
+        doc.setFontSize(9); doc.setFont(undefined,'bold');
+        doc.text("ORIGEN", 15, yS); doc.line(15, yS+1, 90, yS+1); doc.setFont(undefined,'normal');
+        doc.text(`Fecha: ${fecha}`,15,yS+6); doc.text(`Ticket: ${ticket}`,15,yS+11); doc.text(`Envía: ${operador}`,15,yS+16);
+
+        doc.setFont(undefined,'bold'); doc.text("DESTINO", 110, yS); doc.line(110, yS+1, 195, yS+1); doc.setFont(undefined,'normal');
+        let destName = currentOutputType==='planta' ? document.getElementById('outPlantaNombre').value : (currentOutputType==='tienda' ? document.getElementById('outTiendaNombre').value : document.getElementById('outNombre').value);
+        doc.text(`Destino: ${destName}`,110,yS+6); doc.text(`Usuario: ${document.getElementById('outNombre').value}`,110,yS+11); doc.text(`Área: ${document.getElementById('outArea').value}`,110,yS+16);
+
+        let yT = yS + 30;
+        const table = outputQueue.map(i => [i.sn, i.id, i.tip, i.brand, i.model, i.fa||'', i.oc||'', `R${bodegas[bIdx].racks[i.r].name}`, i.val||'']);
+        doc.autoTable({ startY: yT, head: [['Serie','Activo','Equipo','Marca','Modelo','Factura','OC','Ubic.','Valor']], body: table, headStyles: { fillColor: useBlue?[0,112,192]:[40,40,40] } });
+
+        if(useBlue) renderApprovers(doc);
+        else { let y = doc.lastAutoTable.finalY + 30; doc.line(70,y,140,y); doc.text("Firma de Conformidad", 105,y+5,null,null,"center"); }
+        if(useBlue) { doc.setFillColor(0,112,192); doc.rect(0, doc.internal.pageSize.height-15, pageWidth, 15, 'F'); }
+        
+        doc.save(`Salida_${currentOutputType}_${ticket}.pdf`);
+    }
+
+    function renderApprovers(doc) {
+        let y = doc.lastAutoTable.finalY + 30;
+        let startX=15, curX=startX, gap=65, count=0;
+        doc.setFontSize(9);
+        for(let i=1; i<=5; i++) {
+            let n = document.getElementById(`signName${i}`).value;
+            let j = document.getElementById(`signJob${i}`).value;
+            let r = document.getElementById(`signRole${i}`).value;
+            if(n) {
+                if(r) { doc.setFont(undefined,'bold'); doc.text(r.toUpperCase(), curX+25, y-2, null,null,"center"); doc.setFont(undefined,'normal'); }
+                doc.line(curX,y,curX+50,y);
+                doc.text(n, curX+25,y+5,null,null,"center");
+                doc.setFontSize(8); doc.setTextColor(100); doc.text(j, curX+25,y+10,null,null,"center");
+                doc.setFontSize(9); doc.setTextColor(0);
+                curX+=gap; count++;
+                if(count===3) { curX=startX; y+=35; count=0; }
+            }
+        }
+    }
+
+    // REPLACES OLD executeOutput
+    confirmarSalidaCompleta = function() {
+        if(outputQueue.length===0) return;
+        
+        let docData = null;
+        let finalFile = null;
+
+        if(currentOutputType === 'asignacion') finalFile = document.getElementById('fileRespAsig').files[0];
+        else if(currentOutputType === 'planta') finalFile = document.getElementById('fileRespPlantaTienda').files[0];
+        else if(currentOutputType === 'tienda') finalFile = document.getElementById('fileRespPlantaTienda').files[0];
+        else if(currentOutputType === 'destruccion') {
+            finalFile = document.getElementById('fileRespDest').files[0];
+            if(evidenceFiles.length === 0) return alert("Falta evidencia fotográfica.");
+        }
+
+        if(currentOutputType !== 'laboratorio' && !finalFile) return alert("Falta archivo firmado.");
+        
+        docData = currentOutputType === 'laboratorio' ? "QR_PROCESS" : "PDF_SIGNED_MOCK"; 
+
+        const tick = document.getElementById('outTicket').value || 'NA';
+        const ts = new Date().toLocaleString();
+        
+        outputQueue.forEach(i => {
+            let idx = bodegas[bIdx].inv.findIndex(x=>x.id===i.id);
+            if(idx>-1) bodegas[bIdx].inv.splice(idx,1);
+            salidasLog.unshift({ ...i, salidaData: { fecha:ts, tipo:currentOutputType, ticket:tick, doc:docData, evidence: evidenceFiles } });
+            auditLog.unshift({ fecha:ts, bod: bodegas[bIdx].nombre, op: "Admin", ev: `SALIDA (${currentOutputType})`, id:i.id, info: `Ticket: ${tick}`, loc: "SALIDA" });
+        });
+        alert("Salida Confirmada.");
+        outputQueue=[]; closeOutputModal(); updateOutputBadge(); saveDB(); renderAll();
+    }
+
+</body></html>');w.document.close();w.focus();setTimeout(()=>{w.print();w.close()},500);},300); }
     function renderAll() { document.getElementById('tabsContainer').innerHTML=bodegas.map((b,i)=>`<button class="warehouse-tab ${i===bIdx?'active':''}" onclick="bIdx=${i};renderAll()">${b.nombre}</button>`).join(''); fillSelects(); renderMap(); renderTable(); }
 </script>
+
+    // --- NEW OUTPUT MODULE LOGIC (v12.38) ---
+    let savedSignatures = { names: [], jobs: [], roles: [] };
+    let savedLogos = { planta: null, tienda: null }; 
+    let companyList = [ { name: "AVANTE (DTA)", logo: null }, { name: "AVANTE (ALKA)", logo: null } ];
+    let labList = ["Laboratorio HP", "Lenovo Service", "Soporte Interno"];
+    let savedEngineers = ["Ingeniero 1"];
+    let evidenceFiles = []; 
+    let currentOutputType = 'asignacion'; 
+    let generatedLabQR = ""; 
+    let currentSessionFolio = "";
+    let salidasLog = [];
+
+    // Override LoadDB to include new fields
+    const ORIGINAL_LOAD_DB = loadDB;
+    loadDB = function() {
+        ORIGINAL_LOAD_DB();
+        const data = localStorage.getItem(DB_KEY);
+        if(data) {
+            try {
+                const parsed = JSON.parse(data);
+                salidasLog = parsed.salidasLog || [];
+                savedSignatures = parsed.savedSignatures || { names: [], jobs: [], roles: [] };
+                savedLogos = parsed.savedLogos || { planta: null, tienda: null };
+                savedEngineers = parsed.savedEngineers || ["Ingeniero 1"];
+                companyList = parsed.companyList || [ { name: "AVANTE (DTA)", logo: null }, { name: "AVANTE (ALKA)", logo: null } ];
+                labList = parsed.labList || ["Laboratorio HP", "Lenovo Service", "Soporte Interno"];
+            } catch(e) { console.error("Error loading new fields", e); }
+        }
+        // Init UI
+        if(savedLogos.planta) { try{document.getElementById('previewPlanta').src = savedLogos.planta; document.getElementById('previewPlanta').style.display='inline-block'; document.getElementById('txtPlanta').style.display='none';}catch(e){} }
+        if(savedLogos.tienda) { try{document.getElementById('previewTienda').src = savedLogos.tienda; document.getElementById('previewTienda').style.display='inline-block'; document.getElementById('txtTienda').style.display='none';}catch(e){} }
+        updateEngineerList();
+        renderSignRows();
+        renderCompanySelect();
+        renderLabSelect();
+    };
+
+    // Override SaveDB
+    const ORIGINAL_SAVE_DB = saveDB;
+    saveDB = function() {
+        const data = {
+            bodegas, auditLog, globalDocs, opciones, rules,
+            salidasLog, savedSignatures, savedLogos, savedEngineers, companyList, labList
+        };
+        try {
+            localStorage.setItem(DB_KEY, JSON.stringify(data));
+            console.log("DB Guardada (Extended)");
+        } catch (e) {
+            console.error("Error guardando DB", e);
+        }
+    };
+
+    /* --- EMPRESAS & LABS --- */
+    function renderCompanySelect() {
+        const sel = document.getElementById('destCompanySelect');
+        if(!sel) return;
+        sel.innerHTML = companyList.map((c, i) => `<option value="${i}">${c.name}</option>`).join('');
+    }
+
+    function renderLabSelect() {
+        const sel = document.getElementById('labSelect');
+        if(!sel) return;
+        sel.innerHTML = labList.map(l => `<option value="${l}">${l}</option>`).join('');
+    }
+
+    function addNewLab() {
+        const name = prompt("Nombre del nuevo laboratorio:");
+        if(name) {
+            labList.push(name);
+            saveDB();
+            renderLabSelect();
+            document.getElementById('labSelect').value = name;
+        }
+    }
+
+    /* --- LOGOS --- */
+    function previewNewCompanyLogo() {
+        const file = document.getElementById('newCompanyLogo').files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = (e) => { document.getElementById('newCompanyPreview').src = e.target.result; document.getElementById('newCompanyPreview').style.display='inline-block'; };
+            reader.readAsDataURL(file);
+        }
+    }
+
+    function saveNewCompany() {
+        const name = document.getElementById('newCompanyName').value.trim();
+        const src = document.getElementById('newCompanyPreview').src;
+        if(!name) return alert("Ingrese un nombre.");
+        let logoData = null;
+        if(src && src.startsWith('data:image')) logoData = src;
+        companyList.push({ name: name, logo: logoData });
+        saveDB();
+        renderCompanySelect();
+        alert("Empresa agregada.");
+        document.getElementById('companyModal').style.display='none';
+    }
+
+    /* --- HELPERS --- */
+    function calcAge(dateStr) {
+        if(!dateStr) return "N/D";
+        const d = new Date(dateStr);
+        const now = new Date();
+        const diffTime = Math.abs(now - d);
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)); 
+        if(diffDays > 365) return (diffDays/365).toFixed(1) + " años";
+        return diffDays + " días";
+    }
+
+    /* --- LOGOS & INGENIEROS --- */
+    function previewLogo(type) {
+        const idInput = type === 'planta' ? 'logoInputPlanta' : 'logoInputTienda';
+        const idImg = type === 'planta' ? 'previewPlanta' : 'previewTienda';
+        const idTxt = type === 'planta' ? 'txtPlanta' : 'txtTienda';
+        const file = document.getElementById(idInput).files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                document.getElementById(idImg).src = e.target.result;
+                document.getElementById(idImg).style.display = 'inline-block';
+                document.getElementById(idTxt).style.display = 'none';
+            };
+            reader.readAsDataURL(file);
+        }
+    }
+    
+    function updateEngineerList() {
+        const l = document.getElementById('listIngenieros');
+        if(!l) return;
+        l.innerHTML = savedEngineers.map(e => `<option value="${e}">`).join('');
+    }
+    function saveEngineer() {
+        const v = document.getElementById('labIngeniero').value;
+        if(v && !savedEngineers.includes(v)) { savedEngineers.push(v); saveDB(); updateEngineerList(); alert("Ingeniero guardado."); }
+    }
+
+    /* --- FIRMAS --- */
+    function renderSignRows() {
+        let html = '';
+        for(let i=1; i<=5; i++) {
+            html += `<div class="sign-row">
+                <div class="input-row"><i class="fas fa-user"></i><input type="text" id="signName${i}" placeholder="Nombre ${i}"></div>
+                <div class="input-row"><i class="fas fa-briefcase"></i><input type="text" id="signJob${i}" placeholder="Puesto ${i}"></div>
+                <div class="input-row"><i class="fas fa-tasks"></i><input type="text" id="signRole${i}" placeholder="Rol ${i}"></div>
+            </div>`;
+        }
+        const c = document.getElementById('signRowsContainer');
+        if(c) c.innerHTML = html;
+    }
+    function loadSignaturesToForm() {
+        for(let i=0; i<5; i++) {
+            if(savedSignatures.names[i]) document.getElementById(`signName${i+1}`).value = savedSignatures.names[i];
+            if(savedSignatures.jobs[i]) document.getElementById(`signJob${i+1}`).value = savedSignatures.jobs[i];
+            if(savedSignatures.roles[i]) document.getElementById(`signRole${i+1}`).value = savedSignatures.roles[i];
+        }
+    }
+    function saveSignatureConfig() {
+        let n=[], j=[], r=[];
+        for(let i=1; i<=5; i++) {
+            n.push(document.getElementById(`signName${i}`).value);
+            j.push(document.getElementById(`signJob${i}`).value);
+            r.push(document.getElementById(`signRole${i}`).value);
+        }
+        savedSignatures = { names:n, jobs:j, roles:r };
+        saveDB(); alert("Firmas guardadas.");
+    }
+
+    /* --- EVIDENCIA MULTIPLE --- */
+    function handleEvidenceSelection() {
+        const input = document.getElementById('fileEvidence');
+        const files = Array.from(input.files);
+        files.forEach(file => {
+            const reader = new FileReader();
+            reader.onload = (e) => { evidenceFiles.push(e.target.result); renderEvidencePreviews(); };
+            reader.readAsDataURL(file);
+        });
+        input.value = ""; 
+    }
+    function renderEvidencePreviews() {
+        const c = document.getElementById('evidencePreviewContainer');
+        c.innerHTML = evidenceFiles.map((src, idx) => `<div class="evidence-thumb"><img src="${src}"><div class="btn-del-img" onclick="removeEvidence(${idx})">x</div></div>`).join('');
+    }
+    function removeEvidence(idx) { evidenceFiles.splice(idx, 1); renderEvidencePreviews(); }
+
+    /* --- BUSCADOR Y SELECCION --- */
+    function openSearchSelection() {
+        document.getElementById('searchSelectionModal').style.display='flex';
+        renderSearchSelectionTable();
+    }
+    function renderSearchSelectionTable() {
+        const filter = document.getElementById('searchSelectInput').value.toLowerCase();
+        const tbody = document.getElementById('searchSelectionBody');
+        tbody.innerHTML = "";
+        let filtered = bodegas[bIdx].inv.filter(i => i.id.toLowerCase().includes(filter) || (i.sn && i.sn.toLowerCase().includes(filter)) || (i.model && i.model.toLowerCase().includes(filter)));
+        filtered = filtered.filter(i => !outputQueue.some(q => q.id === i.id));
+        filtered.forEach(i => {
+            const ubic = i.r === -1 ? "Recepción" : `${bodegas[bIdx].racks[i.r].name}-N${i.n}`;
+            tbody.innerHTML += `<tr><td><input type="checkbox" class="chk-search-select" value="${i.id}"></td><td><b>${i.id}</b></td><td>${i.sn||'-'}</td><td>${i.brand||'-'}</td><td>${i.model||'-'}</td><td>${i.tip}</td><td>${ubic}</td></tr>`;
+        });
+        document.getElementById('searchCount').innerText = "Filtrados: " + filtered.length;
+    }
+    function toggleAllSearch(s) { document.querySelectorAll('.chk-search-select').forEach(c => c.checked = s.checked); }
+    function addFromSearchSelection() {
+        document.querySelectorAll('.chk-search-select:checked').forEach(c => {
+            const item = bodegas[bIdx].inv.find(i => i.id === c.value);
+            if(item) outputQueue.push(item);
+        });
+        updateOutputBadge(); renderQueue(); document.getElementById('searchSelectionModal').style.display='none';
+    }
+
+    /* --- GESTION COLA DETALLADA --- */
+    function renderQueue() {
+        const c = document.getElementById('queueListContainer');
+        if(!c) return;
+        if(outputQueue.length===0) { c.innerHTML='<div style="padding:15px;text-align:center;color:#ccc;">Cola vacía. Use "Buscar y Agregar".</div>'; return; }
+        
+        let html = `<table class="mini-table">
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>Empresa</th>
+                    <th>Activo</th>
+                    <th>Equipo</th>
+                    <th>Marca</th>
+                    <th>Modelo</th>
+                    <th>Serie</th>
+                    <th>Antigüedad</th>
+                    <th>Año Adq</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>`;
+        
+        outputQueue.forEach((item, i) => {
+            let age = calcAge(item.fComp);
+            let year = item.fComp ? item.fComp.split('-')[0] : 'N/D';
+            html += `<tr>
+                <td>${i+1}</td>
+                <td>${item.ci||'Sin Asignar'}</td>
+                <td><b>${item.id}</b></td>
+                <td>${item.tip}</td>
+                <td>${item.brand||'-'}</td>
+                <td>${item.model||'-'}</td>
+                <td>${item.sn||'-'}</td>
+                <td>${age}</td>
+                <td>${year}</td>
+                <td style="text-align:center;"><i class="fas fa-times btn-remove-item" onclick="removeFromOutput(${i})"></i></td>
+            </tr>`;
+        });
+        html += `</tbody></table>`;
+        c.innerHTML = html;
+    }
+    
+    // REPLACES OLD removeFromOutput
+    removeFromOutput = function(idx) {
+        outputQueue.splice(idx, 1);
+        updateOutputBadge();
+        renderQueue(); // Update queue list
+        renderOutputList(); // Update old list if still exists
+        if(outputQueue.length === 0) closeOutputModal();
+    }
+
+    // REPLACES OLD openOutputModal
+    openOutputModal = function() {
+        document.getElementById('outputModal').style.display = 'flex'; 
+        document.getElementById('outOperador').value = document.getElementById('operador').value || 'Sistemas';
+        currentSessionFolio = Math.floor(Math.random()*10000)+5000;
+        document.getElementById('sessionFolioDisplay').innerText = `(Folio Sesión: ${currentSessionFolio})`;
+        evidenceFiles = []; renderEvidencePreviews(); 
+        loadSignaturesToForm(); renderQueue(); setOutputType('asignacion'); 
+    }
+
+    // REPLACES OLD closeOutputModal
+    closeOutputModal = function() { document.getElementById('outputModal').style.display = 'none'; }
+    
+    // NEW Functions
+    function setOutputType(type) {
+        currentOutputType = type;
+        document.querySelectorAll('.type-btn').forEach(b => b.classList.remove('active'));
+        document.querySelectorAll(`.type-btn[onclick*='${type}']`)[0].classList.add('active');
+        
+        ['formStandard','formDestruccion','formLaboratorio'].forEach(id=>document.getElementById(id).style.display='none');
+        ['approversSection'].forEach(id=>document.getElementById(id).style.display='none');
+        
+        document.querySelectorAll('.doc-section').forEach(d => d.classList.remove('active'));
+
+        const rowTicket = document.getElementById('rowTicket');
+        if(type === 'destruccion') rowTicket.style.display = 'none'; else rowTicket.style.display = 'flex';
+
+        if(type === 'destruccion') {
+            document.getElementById('formDestruccion').style.display = 'block';
+            document.getElementById('approversSection').style.display = 'block';
+            document.getElementById('docDestruccion').classList.add('active');
+        } else if (type === 'laboratorio') {
+            document.getElementById('formStandard').style.display = 'block'; 
+            document.getElementById('rowObs').style.display = 'none';
+            document.getElementById('formLaboratorio').style.display = 'block';
+            document.getElementById('docLaboratorio').classList.add('active');
+            
+            generatedLabQR = ""; document.getElementById('qrScanInput').value = "";
+            document.getElementById('btnConfirmarSalida').disabled = true;
+            document.getElementById('btnConfirmarSalida').style.background = '#ccc';
+        } else {
+            document.getElementById('formStandard').style.display = 'block';
+            document.getElementById('rowObs').style.display = 'flex';
+            
+            if(type === 'asignacion') document.getElementById('docAsignacion').classList.add('active');
+            if(type === 'planta') { document.getElementById('docPlantaTienda').classList.add('active'); document.getElementById('approversSection').style.display = 'block'; }
+            if(type === 'tienda') { document.getElementById('docPlantaTienda').classList.add('active'); document.getElementById('approversSection').style.display = 'block'; }
+
+            document.getElementById('rowPlanta').style.display = type === 'planta' ? 'flex' : 'none';
+            document.getElementById('rowTienda').style.display = type === 'tienda' ? 'flex' : 'none';
+        }
+        
+        if(type !== 'laboratorio') {
+            document.getElementById('btnConfirmarSalida').disabled = false;
+            document.getElementById('btnConfirmarSalida').style.background = 'var(--success)';
+        }
+    }
+
+    function checkLabQR() {
+        const val = document.getElementById('qrScanInput').value.trim();
+        if(val === generatedLabQR && generatedLabQR !== "") {
+            document.getElementById('qrMsg').innerText = "Correcto"; document.getElementById('qrMsg').style.color="green";
+            document.getElementById('btnConfirmarSalida').disabled = false; document.getElementById('btnConfirmarSalida').style.background = 'var(--success)';
+        }
+    }
+
+    function generarQRLabel() {
+        const ticket = document.getElementById('outTicket').value || 'NA';
+        const folio = currentSessionFolio;
+        const text = `SALIDA:${currentOutputType.toUpperCase()}\nTICKET:${ticket}\nFOLIO:${folio}\nITEMS:${outputQueue.length}`;
+        const box = document.getElementById('qrPrintArea'); box.innerHTML = '';
+        new QRCode(box, { text: text, width: 200, height: 200 });
+        setTimeout(() => {
+            const w = window.open('', '', 'width=400,height=400');
+            w.document.write(`<html><body style="text-align:center; font-family:sans-serif;"><h2>ETIQUETA CAJA</h2><div style="margin:20px;">${box.innerHTML}</div><p><b>FOLIO: ${folio}</b></p><p>Tipo: ${currentOutputType.toUpperCase()}</p><script>window.print();window.close();<\/script></body></html>`);
+            w.document.close();
+        }, 300);
+    }
+
+    function generarEtiquetasContenedores() {
+        const count = parseInt(document.getElementById('destContainerCount').value);
+        if(!count || count < 1) return alert("Ingrese una cantidad válida.");
+        const folio = currentSessionFolio; 
+        const date = new Date().toLocaleDateString();
+        const box = document.getElementById('qrContainerHidden');
+        
+        box.innerHTML = ''; 
+        for(let i=1; i<=count; i++) {
+            const divId = `qr-dest-${i}`;
+            const qrDiv = document.createElement('div'); qrDiv.id = divId; box.appendChild(qrDiv);
+            const text = `DESTRUCCION|FOLIO:${folio}|FECHA:${date}|CONT:${i}/${count}`;
+            new QRCode(qrDiv, { text: text, width: 300, height: 300 });
+        }
+
+        setTimeout(() => {
+            let printContent = `<html><head><style>body { font-family: sans-serif; } .label-page { page-break-after: always; text-align: center; border: 2px solid #000; padding: 20px; margin: 20px; height: 90vh; display: flex; flex-direction: column; justify-content: center; align-items: center; } .qr-div { margin: 20px auto; } h1 { font-size: 40px; margin: 10px 0; } h2 { font-size: 24px; margin: 5px 0; }</style></head><body>`;
+            for(let i=1; i<=count; i++) {
+                const qrHTML = document.getElementById(`qr-dest-${i}`).innerHTML;
+                printContent += `<div class="label-page"><h1>DESTRUCCIÓN</h1><div class="qr-div">${qrHTML}</div><h2>FOLIO: ${folio}</h2><h2>FECHA: ${date}</h2><h1>CONTENEDOR ${i} DE ${count}</h1></div>`;
+            }
+            printContent += `<script>window.print();window.close();<\/script></body></html>`;
+            const w = window.open('', '', 'width=800,height=600'); w.document.write(printContent); w.document.close();
+        }, 500);
+    }
+
+    function generarEtiquetasEquipos() {
+        if(outputQueue.length === 0) return alert("No hay equipos seleccionados.");
+        
+        let rows = prompt("¿Cuántas filas de etiquetas por hoja?", "6");
+        let cols = prompt("¿Cuántas columnas de etiquetas por hoja?", "3");
+        if(!rows || !cols) return;
+        
+        rows = parseInt(rows); cols = parseInt(cols);
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF();
+        const pageWidth = 210;
+        const pageHeight = 297;
+        const margin = 10;
+        
+        const cellW = (pageWidth - (margin*2)) / cols;
+        const cellH = (pageHeight - (margin*2)) / rows;
+        
+        const folio = currentSessionFolio;
+        const date = new Date().toLocaleDateString();
+        const box = document.getElementById('qrContainerHidden');
+        box.innerHTML = ''; 
+
+        outputQueue.forEach((item, idx) => {
+            const divId = `qr-eq-${idx}`;
+            const qrDiv = document.createElement('div'); qrDiv.id = divId; box.appendChild(qrDiv);
+            const text = `BAJA|${folio}|${item.id}|${item.sn}`;
+            new QRCode(qrDiv, { text: text, width: 100, height: 100 });
+        });
+
+        setTimeout(() => {
+            outputQueue.forEach((item, i) => {
+                if (i > 0 && i % (rows * cols) === 0) doc.addPage();
+                
+                const pageIndex = i % (rows * cols);
+                const r = Math.floor(pageIndex / cols);
+                const c = pageIndex % cols;
+                
+                const x = margin + (c * cellW);
+                const y = margin + (r * cellH);
+                
+                doc.setDrawColor(0); doc.rect(x+2, y+2, cellW-4, cellH-4);
+                doc.setFontSize(10); doc.setFont(undefined, 'bold'); doc.text(`BAJA - FOLIO: ${folio}`, x + 5, y + 8);
+                const qrImg = document.getElementById(`qr-eq-${i}`).querySelector('img');
+                if(qrImg) { try { doc.addImage(qrImg.src, 'JPEG', x + 5, y + 12, 25, 25); } catch(e){} }
+                doc.setFontSize(8); doc.setFont(undefined, 'normal');
+                let textX = x + 35; let textY = y + 15;
+                doc.text(`Activo: ${item.id}`, textX, textY); textY+=4;
+                doc.text(`Serie: ${item.sn||'-'}`, textX, textY); textY+=4;
+                doc.text(`Tipo: ${item.tip}`, textX, textY); textY+=4;
+                doc.text(`Fecha: ${date}`, textX, textY); textY+=6;
+                doc.setFont(undefined, 'bold'); doc.text(`Item ${i+1} de ${outputQueue.length}`, textX, textY);
+            });
+            doc.save(`Etiquetas_Equipos_${folio}.pdf`);
+        }, 800);
+    }
+
+    async function generarDocumentos() {
+        if(outputQueue.length === 0) return alert("No hay equipos.");
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF();
+        const pageWidth = doc.internal.pageSize.width;
+        const pageHeight = doc.internal.pageSize.height;
+        const blueColor = [0, 112, 192];
+        const fecha = new Date().toLocaleDateString();
+        const folio = currentSessionFolio; 
+        const ticket = document.getElementById('outTicket').value || 'S/N';
+        const operador = document.getElementById('outOperador').value;
+
+        if(currentOutputType === 'destruccion') {
+            const cia = document.getElementById('destCompanySelect').value;
+            const companyObj = companyList[cia];
+            const ciaName = companyObj.name;
+            const logo = companyObj.logo;
+
+            const drawHeaderFooter = (data) => {
+                const headerHeight = 12; 
+                doc.setFillColor(...blueColor); 
+                doc.rect(0, 0, pageWidth, headerHeight, 'F'); 
+                doc.rect(0, pageHeight - 15, pageWidth, 15, 'F'); 
+                
+                doc.setTextColor(0); 
+                if(logo) { try { doc.addImage(logo, 'JPEG', 15, 15, 30, 15); } catch(e){} } 
+                
+                doc.setFontSize(16); doc.text(ciaName, pageWidth/2, 20, {align:'center'}); 
+                doc.setFontSize(14); doc.text("BAJA DE MATERIAL DAÑADO", pageWidth/2, 28, {align:'center'});
+                
+                doc.setFontSize(10); doc.setFont(undefined, 'bold'); 
+                doc.text(`Folio: ${folio}`, pageWidth - 15, 20, { align: 'right' }); 
+                doc.text(`Fecha: ${fecha}`, pageWidth - 15, 25, { align: 'right' });
+                doc.setFont(undefined, 'normal');
+                
+                doc.setTextColor(255); doc.setFontSize(9); doc.text(`Página ${doc.getCurrentPageInfo().pageNumber}`, pageWidth - 20, pageHeight - 5);
+                doc.setTextColor(0);
+            };
+
+            doc.setFontSize(9);
+            const intro = "A continuación, se muestra la lista de equipos que deben causar baja del activo fijo derivado de daños físicos y/o fallas no reparables. Dicho equipamiento debe ser procesado para su destrucción bajo el procedimiento correspondiente avalado por el área de auditoría y control de activos de la empresa.";
+            doc.text(intro, 15, 45, { maxWidth: 180, align: "justify" });
+            
+            const tableBody = outputQueue.map((item, idx) => [idx+1, item.ci || 'Sin Asignar', item.id, item.tip, item.brand||'', item.model||'', item.sn||'', calcAge(item.fComp), (item.fComp ? item.fComp.split('-')[0] : 'N/D')]);
+            
+            doc.autoTable({ startY: 65, head: [['#', 'Empresa', 'Activo', 'Equipo', 'Marca', 'Modelo', 'Serie', 'Antigüedad', 'Año Adq.']], body: tableBody, theme: 'grid', headStyles: { fillColor: blueColor, textColor: 255 }, didDrawPage: drawHeaderFooter, margin: { top: 40 } });
+            
+            let y = doc.lastAutoTable.finalY + 20;
+            if(y > pageHeight - 60) { doc.addPage(); y = 50; drawHeaderFooter(); }
+            
+            let signHeaders = [], rowData = [];
+            for(let i=1; i<=5; i++) {
+                let r = document.getElementById(`signRole${i}`).value.trim();
+                let n = document.getElementById(`signName${i}`).value.trim();
+                let j = document.getElementById(`signJob${i}`).value.trim();
+                if(n) { signHeaders.push(r || "Firma"); rowData.push(n + "\n" + j); }
+            }
+            if(signHeaders.length > 0) doc.autoTable({ startY: y, head: [signHeaders], body: [rowData], theme: 'grid', headStyles: { fillColor: blueColor, textColor: 255, halign: 'center', valign: 'middle' }, bodyStyles: { minCellHeight: 25, halign: 'center', valign: 'bottom' }, styles: { fontSize: 8, cellPadding: 2 } });
+            
+            doc.save(`Baja_Destruccion_${folio}.pdf`);
+            return;
+        }
+
+        if(currentOutputType === 'laboratorio') {
+            const ing = document.getElementById('labIngeniero').value;
+            const mot = document.getElementById('labMotivo').value;
+            const labName = document.getElementById('labSelect').value;
+            generatedLabQR = `LAB-${ticket}-${folio}`;
+            
+            doc.setFontSize(16); doc.text(labName, pageWidth/2, 20, null, null, "center");
+            doc.setFontSize(12); doc.text(`ETIQUETA DE SALIDA - FOLIO ${folio}`, pageWidth/2, 28, null, null, "center");
+            
+            doc.setFontSize(10); 
+            doc.text(`Fecha: ${fecha}`, 15, 40); 
+            doc.text(`Ticket: ${ticket}`, 110, 40);
+            doc.text(`Ingeniero: ${ing}`, 15, 47);
+            
+            const usrName = document.getElementById('outNombre').value;
+            const usrArea = document.getElementById('outArea').value;
+            const usrNum = document.getElementById('outNumEmp').value;
+            doc.text(`Entregó: ${usrName} (${usrNum})`, 15, 54);
+            doc.text(`Área: ${usrArea}`, 110, 54);
+
+            doc.setFont(undefined, 'bold');
+            doc.text(`Motivo: ${mot}`, 15, 65);
+            doc.setFont(undefined, 'normal');
+            
+            const tableBody = outputQueue.map(item => [item.id, item.tip, item.brand, item.model, item.sn]);
+            doc.autoTable({ startY: 70, head: [['Activo', 'Equipo', 'Marca', 'Modelo', 'Serie']], body: tableBody, theme: 'striped' });
+            
+            const qrCanvas = document.createElement('canvas'); await QRCode.toCanvas(qrCanvas, generatedLabQR, { width: 150 });
+            let yQR = doc.lastAutoTable.finalY + 10;
+            doc.addImage(qrCanvas.toDataURL("image/jpeg"), 'JPEG', (pageWidth/2)-25, yQR, 50, 50);
+            doc.text("Escanear para confirmar recepción", pageWidth/2, yQR + 55, null, null, "center");
+            
+            doc.save(`Etiqueta_Lab_${ticket}.pdf`);
+            alert("Etiqueta generada. Escanee el QR para salir.");
+            return;
+        }
+
+        let mainTitle = "OPTIMA - AVANTE", subTitle = `SALIDA DE MATERIALES (${currentOutputType.toUpperCase()})`, useBlue = (currentOutputType === 'planta' || currentOutputType === 'tienda'), logo = savedLogos.planta; 
+        if(currentOutputType==='planta') { mainTitle="AVANTE (DTA)"; subTitle="SALIDA DE MATERIALES (PLANTA)"; logo=savedLogos.planta; }
+        if(currentOutputType==='tienda') { mainTitle="AVANTE (ALKA)"; subTitle="SALIDA DE MATERIALES (TIENDA)"; logo=savedLogos.tienda; }
+
+        if(useBlue) {
+            doc.setFillColor(0, 112, 192); doc.rect(0,0,pageWidth,20,'F');
+            doc.setTextColor(255); doc.setFontSize(16); doc.text(mainTitle, pageWidth/2, 12, null,null,"center");
+            doc.setTextColor(0); doc.setFontSize(12); doc.text(subTitle, pageWidth/2, 30, null,null,"center");
+            if(logo) { try{doc.addImage(logo,'JPEG',10,25,30,15);}catch(e){} }
+            doc.setFontSize(11); doc.setFont(undefined,'bold'); doc.text(`Folio: ${folio}`, pageWidth-15,30,{align:'right'}); doc.setFont(undefined,'normal');
+        } else {
+            doc.setFontSize(18); doc.text("OPTIMA - AVANTE", pageWidth/2, 20, null,null,"center");
+            doc.setFontSize(12); doc.text("ASIGNACIÓN DE EQUIPO", pageWidth/2, 30, null,null,"center");
+            doc.setFontSize(10); doc.text(`Folio: ${folio}`, pageWidth-15,30,{align:'right'});
+        }
+
+        let yS = 45;
+        doc.setFontSize(9); doc.setFont(undefined,'bold');
+        doc.text("ORIGEN", 15, yS); doc.line(15, yS+1, 90, yS+1); doc.setFont(undefined,'normal');
+        doc.text(`Fecha: ${fecha}`,15,yS+6); doc.text(`Ticket: ${ticket}`,15,yS+11); doc.text(`Envía: ${operador}`,15,yS+16);
+
+        doc.setFont(undefined,'bold'); doc.text("DESTINO", 110, yS); doc.line(110, yS+1, 195, yS+1); doc.setFont(undefined,'normal');
+        let destName = currentOutputType==='planta' ? document.getElementById('outPlantaNombre').value : (currentOutputType==='tienda' ? document.getElementById('outTiendaNombre').value : document.getElementById('outNombre').value);
+        doc.text(`Destino: ${destName}`,110,yS+6); doc.text(`Usuario: ${document.getElementById('outNombre').value}`,110,yS+11); doc.text(`Área: ${document.getElementById('outArea').value}`,110,yS+16);
+
+        let yT = yS + 30;
+        const table = outputQueue.map(i => [i.sn, i.id, i.tip, i.brand, i.model, i.fa||'', i.oc||'', `R${bodegas[bIdx].racks[i.r].name}`, i.val||'']);
+        doc.autoTable({ startY: yT, head: [['Serie','Activo','Equipo','Marca','Modelo','Factura','OC','Ubic.','Valor']], body: table, headStyles: { fillColor: useBlue?[0,112,192]:[40,40,40] } });
+
+        if(useBlue) renderApprovers(doc);
+        else { let y = doc.lastAutoTable.finalY + 30; doc.line(70,y,140,y); doc.text("Firma de Conformidad", 105,y+5,null,null,"center"); }
+        if(useBlue) { doc.setFillColor(0,112,192); doc.rect(0, doc.internal.pageSize.height-15, pageWidth, 15, 'F'); }
+        
+        doc.save(`Salida_${currentOutputType}_${ticket}.pdf`);
+    }
+
+    function renderApprovers(doc) {
+        let y = doc.lastAutoTable.finalY + 30;
+        let startX=15, curX=startX, gap=65, count=0;
+        doc.setFontSize(9);
+        for(let i=1; i<=5; i++) {
+            let n = document.getElementById(`signName${i}`).value;
+            let j = document.getElementById(`signJob${i}`).value;
+            let r = document.getElementById(`signRole${i}`).value;
+            if(n) {
+                if(r) { doc.setFont(undefined,'bold'); doc.text(r.toUpperCase(), curX+25, y-2, null,null,"center"); doc.setFont(undefined,'normal'); }
+                doc.line(curX,y,curX+50,y);
+                doc.text(n, curX+25,y+5,null,null,"center");
+                doc.setFontSize(8); doc.setTextColor(100); doc.text(j, curX+25,y+10,null,null,"center");
+                doc.setFontSize(9); doc.setTextColor(0);
+                curX+=gap; count++;
+                if(count===3) { curX=startX; y+=35; count=0; }
+            }
+        }
+    }
+
+    // REPLACES OLD executeOutput
+    confirmarSalidaCompleta = function() {
+        if(outputQueue.length===0) return;
+        
+        let docData = null;
+        let finalFile = null;
+
+        if(currentOutputType === 'asignacion') finalFile = document.getElementById('fileRespAsig').files[0];
+        else if(currentOutputType === 'planta') finalFile = document.getElementById('fileRespPlantaTienda').files[0];
+        else if(currentOutputType === 'tienda') finalFile = document.getElementById('fileRespPlantaTienda').files[0];
+        else if(currentOutputType === 'destruccion') {
+            finalFile = document.getElementById('fileRespDest').files[0];
+            if(evidenceFiles.length === 0) return alert("Falta evidencia fotográfica.");
+        }
+
+        if(currentOutputType !== 'laboratorio' && !finalFile) return alert("Falta archivo firmado.");
+        
+        docData = currentOutputType === 'laboratorio' ? "QR_PROCESS" : "PDF_SIGNED_MOCK"; 
+
+        const tick = document.getElementById('outTicket').value || 'NA';
+        const ts = new Date().toLocaleString();
+        
+        outputQueue.forEach(i => {
+            let idx = bodegas[bIdx].inv.findIndex(x=>x.id===i.id);
+            if(idx>-1) bodegas[bIdx].inv.splice(idx,1);
+            salidasLog.unshift({ ...i, salidaData: { fecha:ts, tipo:currentOutputType, ticket:tick, doc:docData, evidence: evidenceFiles } });
+            auditLog.unshift({ fecha:ts, bod: bodegas[bIdx].nombre, op: "Admin", ev: `SALIDA (${currentOutputType})`, id:i.id, info: `Ticket: ${tick}`, loc: "SALIDA" });
+        });
+        alert("Salida Confirmada.");
+        outputQueue=[]; closeOutputModal(); updateOutputBadge(); saveDB(); renderAll();
+    }
+
 </body>
 </html>
